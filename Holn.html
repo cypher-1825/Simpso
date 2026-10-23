@@ -1,0 +1,2007 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Simpsoteca</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+tailwind.config = {
+    theme: {
+        extend: {
+            colors: {
+                appBg: '#05080f',
+                cardBg: '#141c2f',
+                cardHover: '#1e2942',
+                primary: '#fafafa',
+                secondary: '#94a3b8',
+                accent: '#ff6b00', 
+                appleBlue: '#0a84ff',
+            },
+            fontFamily: {
+                sans: ['-apple-system','BlinkMacSystemFont','SF Pro Display','Segoe UI','Roboto','Inter','Helvetica','Arial','sans-serif'],
+            }
+        }
+    }
+}
+</script>
+
+<style>
+    * { -webkit-tap-highlight-color:transparent; }
+    html, body { overscroll-behavior:none; }
+    body { background:#05080f; color:#fafafa; overflow-x:hidden; padding-bottom:80px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+
+    .hide-scrollbar::-webkit-scrollbar { display:none; }
+    .hide-scrollbar { -ms-overflow-style:none; scrollbar-width:none; }
+
+    .line-clamp-2 { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+    .line-clamp-3 { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+
+    .fade-in { animation:fadeIn .4s cubic-bezier(.4,0,.2,1) forwards; }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(10px);} to{opacity:1;transform:translateY(0);} }
+
+    .glass { background:rgba(20,28,47,.85); backdrop-filter:blur(20px) saturate(180%); border:1px solid rgba(255,255,255,.05); }
+    .glass-btn { background:rgba(255,255,255,.1); backdrop-filter:blur(16px); border:1px solid rgba(255,255,255,.05); }
+
+    .row-scroll { display:flex; gap:12px; overflow-x:auto; padding:4px 16px 24px; scroll-snap-type:x proximity; scroll-padding-left:16px; }
+    .row-scroll > * { scroll-snap-align:start; flex-shrink:0; }
+
+    .card-tap { transition:transform .3s cubic-bezier(.4,0,.2,1), box-shadow .3s; }
+    .card-tap:active { transform:scale(.96); }
+    .card-tap:hover { transform:scale(1.05); z-index: 20; }
+
+    .poster-img { transition:opacity .4s ease; }
+
+    .hero-slide { position:absolute; inset:0; opacity:0; transition:opacity .8s ease; }
+    .hero-slide.active { opacity:1; }
+
+    .nav-active { color:#fff !important; }
+    .nav-active i { color:#ff6b00; }
+
+    .admin-modal { backdrop-filter:blur(10px); background:rgba(0,0,0,.85); }
+
+    #main-player { width:100%; background:#000; border-radius:12px; }
+    #seek-bar, #vol-bar { -webkit-appearance:none; appearance:none; outline:none; }
+    #seek-bar::-webkit-slider-thumb, #vol-bar::-webkit-slider-thumb {
+        -webkit-appearance:none; appearance:none; width:14px; height:14px; border-radius:50%;
+        background:#ff6b00; cursor:pointer; border:2px solid #fff; box-shadow:0 0 6px rgba(0,0,0,.6);
+    }
+    
+    .progress-bar-container { background:rgba(255,255,255,.1); height:8px; border-radius:4px; overflow:hidden; }
+    .progress-bar-fill { background:linear-gradient(90deg,#ff6b00,#ff8c33); height:100%; transition:width .2s ease; }
+
+    .hero-gradient { background: linear-gradient(to top, #05080f 0%, rgba(5,8,15,0.8) 30%, rgba(5,8,15,0) 100%); }
+    .hero-gradient-left { background: linear-gradient(to right, #05080f 0%, rgba(5,8,15,0.6) 40%, rgba(5,8,15,0) 100%); }
+</style>
+</head>
+<body>
+
+<div id="toast-container" class="fixed top-20 left-1/2 -translate-x-1/2 z-[200] flex flex-col gap-2 pointer-events-none w-full max-w-sm px-4"></div>
+
+<header id="main-header" class="fixed top-0 left-0 w-full z-50 transition-all duration-300">
+    <div class="bg-appBg/95 backdrop-blur-md border-b border-white/5">
+        <div class="max-w-[1600px] mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+            <button id="btn-back" onclick="goBack()" class="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-white hover:bg-white/10 transition-colors mr-2" style="visibility:hidden;">
+                <i class="fa-solid fa-arrow-left text-sm"></i>
+            </button>
+            
+            <div class="flex items-center gap-4">
+                <i class="fa-solid fa-bars text-white/80 text-lg cursor-pointer md:hidden" onclick="window.location.hash='home'"></i>
+                <a href="#home" class="flex items-center gap-2">
+                    <span class="text-xl sm:text-2xl font-black italic tracking-tighter text-white">
+                        <span class="text-accent">Simps</span>oteca
+                    </span>
+                </a>
+            </div>
+
+            <nav class="hidden md:flex items-center gap-6 ml-8">
+                <a href="#home" class="nav-item-link text-sm font-medium text-secondary hover:text-white transition-colors" data-link="home">Home</a>
+                <a href="#movies" class="nav-item-link text-sm font-medium text-secondary hover:text-white transition-colors" data-link="movies">Películas</a>
+                <a href="#series" class="nav-item-link text-sm font-medium text-secondary hover:text-white transition-colors" data-link="series">Series</a>
+                <a href="#popular" class="nav-item-link text-sm font-medium text-secondary hover:text-white transition-colors" data-link="popular">Popular</a>
+                <a href="#explore" class="nav-item-link text-sm font-medium text-secondary hover:text-white transition-colors" data-link="explore">Explorar</a>
+            </nav>
+
+            <div class="flex items-center gap-3">
+                <button class="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white/80 hover:text-white">
+                    <i class="fa-regular fa-bell text-sm"></i>
+                </button>
+                <button onclick="openAdminLogin()" class="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white/80 hover:text-white">
+                    <i class="fa-regular fa-user text-sm"></i>
+                </button>
+                <div onclick="openAdminLogin()" class="hidden sm:flex w-8 h-8 rounded-full bg-accent items-center justify-center text-white font-bold text-xs cursor-pointer shadow-lg shadow-accent/30">
+                    <span>AD</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<div id="app" class="min-h-screen pt-[60px]"></div>
+
+<nav id="bottom-nav" class="fixed bottom-0 left-0 w-full z-50 md:hidden">
+    <div class="bg-[#05080f]/95 backdrop-blur-md border-t border-white/5 pb-safe">
+        <div class="flex justify-around items-center px-2 py-2">
+            <a href="#home" class="nav-item flex flex-col items-center gap-1 p-2 w-16 text-secondary transition-colors" data-route="home">
+                <i class="fa-solid fa-house text-lg"></i><span class="text-[10px] font-medium">Home</span>
+            </a>
+            <a href="#explore" class="nav-item flex flex-col items-center gap-1 p-2 w-16 text-secondary transition-colors" data-route="explore">
+                <i class="fa-solid fa-magnifying-glass text-lg"></i><span class="text-[10px] font-medium">Explorar</span>
+            </a>
+            <a href="#movies" class="nav-item flex flex-col items-center gap-1 p-2 w-16 text-secondary transition-colors" data-route="movies">
+                <i class="fa-solid fa-clapperboard text-lg"></i><span class="text-[10px] font-medium">Películas</span>
+            </a>
+            <a href="#mylist" class="nav-item flex flex-col items-center gap-1 p-2 w-16 text-secondary transition-colors" data-route="mylist">
+                <i class="fa-regular fa-user text-lg"></i><span class="text-[10px] font-medium">Perfil</span>
+            </a>
+        </div>
+    </div>
+</nav>
+
+<div id="admin-login-modal" class="fixed inset-0 z-[300] hidden items-center justify-center p-4 admin-modal">
+    <div class="glass rounded-2xl p-6 w-full max-w-sm border border-white/10">
+        <div class="flex items-center gap-3 mb-6">
+            <div class="w-12 h-12 rounded-xl bg-accent flex items-center justify-center">
+                <i class="fa-solid fa-lock text-white text-lg"></i>
+            </div>
+            <div>
+                <h3 class="text-lg font-bold text-white">Panel Admin</h3>
+                <p class="text-xs text-secondary">Acceso restringido</p>
+            </div>
+        </div>
+
+        <div class="space-y-3 mb-6">
+            <div>
+                <label class="text-xs text-secondary uppercase font-bold mb-1 block">Usuario</label>
+                <input id="admin-user" type="text" autocomplete="off"
+                    class="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-accent transition-colors">
+            </div>
+            <div>
+                <label class="text-xs text-secondary uppercase font-bold mb-1 block">Contraseña</label>
+                <input id="admin-pass" type="password" autocomplete="off"
+                    class="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-accent transition-colors">
+            </div>
+        </div>
+
+        <div class="flex gap-2">
+            <button onclick="closeAdminLogin()" class="flex-1 py-3 rounded-xl bg-white/5 text-secondary font-medium hover:bg-white/10 transition-colors">Cancelar</button>
+            <button onclick="tryAdminLogin()" class="flex-1 py-3 rounded-xl bg-accent text-white font-bold hover:bg-orange-600 transition-colors shadow-lg shadow-accent/30">Entrar</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ============================================================
+// CONFIGURACIÓN
+// ============================================================
+const CONFIG = {
+    TMDB_API_KEY: "2509cd5cbfc0e5171ebcb051380187a2",
+    LANG: "es-ES",
+    IMG_BASE: "https://image.tmdb.org/t/p/",
+    TMDB_TIMEOUT: 6000,
+    ADMIN: { user: "user", pass: "cypher" }
+};
+
+const GENRES_LIST = [
+    'Acción','Animación','Aventura','Bélico','Ciencia Ficción','Comedia','Crimen',
+    'Documental','Drama','Familia','Fantasía','Historia','Misterio','Música',
+    'Romance','Suspenso','Terror','Western', 'Otros'
+];
+
+const GENRE_MAP = {
+    'POLICIAL': 'Crimen', 'POLICIALES': 'Crimen',
+    'SUSPENSO': 'Suspenso', 'SUSPENSE': 'Suspenso', 'THRILLER': 'Suspenso',
+    'CRIMEN': 'Crimen', 'CRIMENES': 'Crimen',
+    'ACCION': 'Acción', 'ACCIÓN': 'Acción',
+    'AVENTURA': 'Aventura', 'AVENTURAS': 'Aventura',
+    'COMEDIA': 'Comedia', 'COMEDIAS': 'Comedia',
+    'DRAMA': 'Drama', 'DRAMAS': 'Drama', 'PELICULAS DE DRAMA': 'Drama', 'PELÍCULAS DE DRAMA': 'Drama',
+    'TERROR': 'Terror', 'HORROR': 'Terror',
+    'CIENCIA FICCION': 'Ciencia Ficción', 'CIENCIA FICCIÓN': 'Ciencia Ficción', 'SCI-FI': 'Ciencia Ficción',
+    'FANTASIA': 'Fantasía', 'FANTASÍA': 'Fantasía',
+    'ANIMACION': 'Animación', 'ANIMACIÓN': 'Animación',
+    'BELICO': 'Bélico', 'BÉLICO': 'Bélico', 'GUERRA': 'Bélico',
+    'WESTERN': 'Western', 'VAQUEROS': 'Western',
+    'DOCUMENTAL': 'Documental', 'DOCUMENTALES': 'Documental',
+    'MUSICAL': 'Música', 'MUSICA': 'Música', 'MÚSICA': 'Música',
+    'ROMANCE': 'Romance', 'ROMANTICA': 'Romance', 'ROMÁNTICA': 'Romance',
+    'MISTERIO': 'Misterio', 'MISTERIOS': 'Misterio',
+    'HISTORIA': 'Historia', 'HISTORICO': 'Historia',
+    'FAMILIA': 'Familia', 'FAMILIAR': 'Familia',
+    'INFANTIL': 'Familia', 'NIÑOS': 'Familia'
+};
+
+// ============================================================
+// ESTADO
+// ============================================================
+const state = {
+    catalog: [],
+    favorites: JSON.parse(localStorage.getItem('sp_fav_movies') || '[]'),
+    isAdmin: sessionStorage.getItem('sp_admin') === '1',
+    currentHeroIndex: 0,
+    heroTimer: null,
+    searchFilter: { genre: null, year: null, query: '', type: 'all' },
+    moviesPage: 1,
+    currentItem: null,
+    importCancel: false,
+    lastRoute: 'home',
+    dbAvailable: false
+};
+
+const appContainer = document.getElementById('app');
+
+// ============================================================
+// INDEXEDDB
+// ============================================================
+const DB_NAME = 'SimpsotecaDB';
+const DB_VERSION = 1;
+const STORE = 'catalog';
+let db = null;
+
+function openDB() {
+    return new Promise((resolve, reject) => {
+        if (!window.indexedDB) {
+            reject(new Error('IndexedDB no soportado'));
+            return;
+        }
+        const req = indexedDB.open(DB_NAME, DB_VERSION);
+        req.onerror = () => reject(req.error);
+        req.onsuccess = () => { db = req.result; state.dbAvailable = true; resolve(db); };
+        req.onupgradeneeded = (e) => {
+            const database = e.target.result;
+            if (!database.objectStoreNames.contains(STORE)) {
+                const store = database.createObjectStore(STORE, { keyPath: 'key' });
+                store.createIndex('genre', 'genre', { unique: false });
+                store.createIndex('type', 'type', { unique: false });
+                store.createIndex('year', 'year', { unique: false });
+            }
+        };
+    });
+}
+
+function dbGetAll() {
+    if (!state.dbAvailable) return Promise.resolve(state.catalog);
+    return new Promise((resolve, reject) => {
+        try {
+            const tx = db.transaction(STORE, 'readonly');
+            const req = tx.objectStore(STORE).getAll();
+            req.onsuccess = () => resolve(req.result || []);
+            req.onerror = () => reject(req.error);
+        } catch(e) { resolve(state.catalog); }
+    });
+}
+
+function dbPut(items) {
+    if (!state.dbAvailable) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+        try {
+            const tx = db.transaction(STORE, 'readwrite');
+            const store = tx.objectStore(STORE);
+            const arr = Array.isArray(items) ? items : [items];
+            arr.forEach(item => store.put(item));
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+        } catch(e) { resolve(); }
+    });
+}
+
+function dbPutBulk(items, onProgress) {
+    if (!state.dbAvailable) {
+        if (onProgress) onProgress(items.length, items.length);
+        return Promise.resolve();
+    }
+    return new Promise((resolve, reject) => {
+        const CHUNK = 100;
+        let i = 0;
+        function nextChunk() {
+            if (i >= items.length) return resolve();
+            const chunk = items.slice(i, i + CHUNK);
+            try {
+                const tx = db.transaction(STORE, 'readwrite');
+                const store = tx.objectStore(STORE);
+                chunk.forEach(item => store.put(item));
+                tx.oncomplete = () => {
+                    i += CHUNK;
+                    if (onProgress) onProgress(Math.min(i, items.length), items.length);
+                    setTimeout(nextChunk, 10); 
+                };
+                tx.onerror = () => reject(tx.error);
+            } catch(e) { resolve(); }
+        }
+        nextChunk();
+    });
+}
+
+function dbDelete(key) {
+    if (!state.dbAvailable) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+        try {
+            const tx = db.transaction(STORE, 'readwrite');
+            tx.objectStore(STORE).delete(key);
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+        } catch(e) { resolve(); }
+    });
+}
+
+function dbClear() {
+    if (!state.dbAvailable) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+        try {
+            const tx = db.transaction(STORE, 'readwrite');
+            tx.objectStore(STORE).clear();
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+        } catch(e) { resolve(); }
+    });
+}
+
+// ============================================================
+// UTILIDADES
+// ============================================================
+function showToast(msg, type = 'info') {
+    const c = document.getElementById('toast-container');
+    const t = document.createElement('div');
+    const bg = type === 'error' ? 'bg-red-500/90' : type === 'success' ? 'bg-green-500/90' : 'bg-cardBg';
+    const border = type === 'info' ? 'border border-white/10' : '';
+    t.className = `${bg} ${border} text-white px-5 py-3 rounded-xl shadow-2xl text-sm font-medium transform transition-all duration-300 translate-y-[-100%] opacity-0 flex items-center gap-2 max-w-full`;
+    t.innerHTML = msg;
+    c.appendChild(t);
+    requestAnimationFrame(() => t.classList.remove('translate-y-[-100%]','opacity-0'));
+    setTimeout(() => {
+        t.classList.add('opacity-0','scale-95');
+        setTimeout(() => t.remove(), 300);
+    }, 3000);
+}
+
+function hashString(s) {
+    let h = 0;
+    for (let i = 0; i < s.length; i++) h = ((h << 5) - h) + s.charCodeAt(i) | 0;
+    return Math.abs(h);
+}
+
+function makePlaceholder(title, w = 300, h = 450) {
+    const hue = hashString(title) % 360;
+    const initials = title.split(' ').slice(0, 2).map(x => x[0] || '').join('').toUpperCase() || '?';
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="hsl(${hue},30%,18%)"></stop><stop offset="100%" stop-color="hsl(${hue},30%,8%)"></stop></linearGradient></defs><rect width="${w}" height="${h}" fill="url(#g)"></rect><text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" font-family="sans-serif" font-size="${Math.floor(w/4)}" font-weight="900" fill="rgba(255,255,255,0.12)">${initials}</text></svg>`;
+    return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+}
+
+function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ============================================================
+// TMDB
+// ============================================================
+async function fetchWithTimeout(url, ms) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), ms);
+    try {
+        const r = await fetch(url, { signal: controller.signal });
+        clearTimeout(timer);
+        return r;
+    } catch (e) { clearTimeout(timer); throw e; }
+}
+
+async function tmdbSearch(query) {
+    if (!query.trim()) return [];
+    let url = `https://api.themoviedb.org/3/search/multi?api_key=${CONFIG.TMDB_API_KEY}&language=${CONFIG.LANG}&query=${encodeURIComponent(query)}&include_adult=false`;
+    try {
+        const r = await fetchWithTimeout(url, CONFIG.TMDB_TIMEOUT);
+        if (!r.ok) return [];
+        const data = await r.json();
+        return (data.results || []).filter(x => x.media_type === 'movie' || x.media_type === 'tv');
+    } catch (e) { return []; }
+}
+
+async function tmdbFindBest(title, year, forceType = null) {
+    const clean = title.replace(/\s*\(.*?\)\s*/g, '').trim();
+    let results = await tmdbSearch(clean);
+    
+    if (forceType) {
+        results = results.filter(x => x.media_type === forceType);
+    }
+
+    if (year) {
+        const exact = results.find(x => {
+            const y = (x.release_date || x.first_air_date || '').slice(0, 4);
+            return String(y) === String(year);
+        });
+        if (exact) return exact;
+    }
+    return results[0] || null;
+}
+
+function getPosterUrl(item, size = 'w342') {
+    if (item.poster_path) return CONFIG.IMG_BASE + size + item.poster_path;
+    return makePlaceholder(item.title || item.name || '', size === 'w342' ? 342 : 500, size === 'w342' ? 513 : 750);
+}
+
+function getBackdropUrl(item, size = 'w1280') {
+    if (item.backdrop_path) return CONFIG.IMG_BASE + size + item.backdrop_path;
+    if (item.poster_path) return CONFIG.IMG_BASE + 'w780' + item.poster_path;
+    return makePlaceholder(item.title || item.name || '', 1280, 720);
+}
+
+// ============================================================
+// CATÁLOGO Y FAVORITOS
+// ============================================================
+function makeKeyForItem(item) {
+    if (item.type === 'tv') {
+        return 'tv_' + hashString(item.title + '_' + (item.year || ''));
+    }
+    if (item.videoUrl) return 'url_' + hashString(item.videoUrl);
+    return `${item.type}_${item.tmdbId}`;
+}
+
+async function addToCatalog(item) {
+    const key = makeKeyForItem(item);
+    item.key = key;
+    item.addedAt = Date.now();
+    const exists = state.catalog.findIndex(x => x.key === key);
+    if (exists > -1) {
+        const prev = state.catalog[exists];
+        item.addedAt = prev.addedAt || Date.now();
+        if (item.isHero === undefined) item.isHero = prev.isHero || false;
+        state.catalog[exists] = item;
+    } else {
+        state.catalog.push(item);
+    }
+    await dbPut(item);
+}
+
+function getHeroItems() {
+    return state.catalog.filter(x => x.isHero);
+}
+
+function isFavorite(item) {
+    return state.favorites.some(f => f.key === item.key);
+}
+
+function toggleFavorite(item) {
+    const idx = state.favorites.findIndex(f => f.key === item.key);
+    if (idx > -1) {
+        state.favorites.splice(idx, 1);
+        showToast('Eliminado de Mi Lista');
+    } else {
+        state.favorites.push({
+            key: item.key, tmdbId: item.tmdbId, type: item.type,
+            title: item.title, year: item.year,
+            poster_path: item.poster_path, backdrop_path: item.backdrop_path,
+            overview: item.overview, rating: item.rating,
+            videoUrl: item.videoUrl, genre: item.genre,
+            episodes: item.episodes || null
+        });
+        showToast('Agregado a Mi Lista', 'success');
+    }
+    try { localStorage.setItem('sp_fav_movies', JSON.stringify(state.favorites)); } catch(e) {}
+}
+
+// ============================================================
+// ADMIN LOGIN
+// ============================================================
+function openAdminLogin() {
+    if (state.isAdmin) { window.location.hash = 'admin'; return; }
+    const m = document.getElementById('admin-login-modal');
+    m.classList.remove('hidden'); m.classList.add('flex');
+    document.getElementById('admin-user').value = '';
+    document.getElementById('admin-pass').value = '';
+    setTimeout(() => document.getElementById('admin-user').focus(), 100);
+}
+
+function closeAdminLogin() {
+    const m = document.getElementById('admin-login-modal');
+    m.classList.add('hidden'); m.classList.remove('flex');
+}
+
+function tryAdminLogin() {
+    const u = document.getElementById('admin-user').value.trim();
+    const p = document.getElementById('admin-pass').value;
+    if (u === CONFIG.ADMIN.user && p === CONFIG.ADMIN.pass) {
+        state.isAdmin = true;
+        sessionStorage.setItem('sp_admin', '1');
+        closeAdminLogin();
+        showToast('👋 Bienvenido Admin', 'success');
+        window.location.hash = 'admin';
+    } else {
+        showToast('❌ Credenciales incorrectas', 'error');
+    }
+}
+
+function adminLogout() {
+    state.isAdmin = false;
+    sessionStorage.removeItem('sp_admin');
+    showToast('Sesión cerrada');
+    window.location.hash = 'home';
+}
+
+// ============================================================
+// NAVEGACIÓN
+// ============================================================
+function goBack() {
+    if (window.history.length > 1) window.history.back();
+    else window.location.hash = 'home';
+}
+
+function updateHeader(showBack = true) {
+    document.getElementById('btn-back').style.visibility = showBack ? 'visible' : 'hidden';
+}
+
+function updateBottomNav(route) {
+    document.querySelectorAll('.nav-item').forEach(el => {
+        if (el.dataset.route === route) el.classList.add('nav-active');
+        else el.classList.remove('nav-active');
+    });
+    document.querySelectorAll('.nav-item-link').forEach(el => {
+        if (el.dataset.link === route) {
+            el.classList.remove('text-secondary');
+            el.classList.add('text-white','font-bold');
+        } else {
+            el.classList.add('text-secondary');
+            el.classList.remove('text-white','font-bold');
+        }
+    });
+}
+
+// ============================================================
+// HOME
+// ============================================================
+function renderHome() {
+    updateHeader(false);
+
+    if (state.catalog.length === 0) {
+        appContainer.innerHTML = `
+            <div class="flex flex-col items-center justify-center min-h-[70vh] px-6 text-center fade-in">
+                <div class="w-20 h-20 rounded-2xl bg-accent flex items-center justify-center mb-6 shadow-lg shadow-accent/30">
+                    <i class="fa-solid fa-film text-white text-3xl"></i>
+                </div>
+                <h1 class="text-3xl font-black mb-3">Bienvenido a Simpsoteca</h1>
+                <p class="text-secondary mb-8 max-w-md">El catálogo está vacío. Ingresa al panel de administración para agregar contenido manualmente o importar tu TXT.</p>
+                <button onclick="openAdminLogin()" class="bg-accent text-white font-bold px-8 py-3 rounded-xl flex items-center gap-2 hover:bg-orange-600 transition-colors shadow-lg shadow-accent/20">
+                    <i class="fa-solid fa-user-shield"></i> Ir al Panel Admin
+                </button>
+            </div>
+        `;
+        return;
+    }
+
+    const heroItems = getHeroItems();
+    
+    const allMovies = state.catalog.filter(x => x.type === 'movie');
+    const allSeries = state.catalog.filter(x => x.type === 'tv');
+    
+    const recentMovies = [...allMovies].sort((a,b) => (b.addedAt||0) - (a.addedAt||0)).slice(0, 10);
+    const recentSeries = [...allSeries].sort((a,b) => (b.addedAt||0) - (a.addedAt||0)).slice(0, 10);
+    
+    const topRated = [...state.catalog].filter(x => x.rating > 0).sort((a,b) => b.rating - a.rating).slice(0, 10);
+    
+    const genreRows = {};
+    state.catalog.forEach(item => {
+        if (!item.genre || item.genre === 'Populares') return;
+        if (!genreRows[item.genre]) genreRows[item.genre] = [];
+        genreRows[item.genre].push(item);
+    });
+
+    const validGenres = Object.keys(genreRows).filter(g => genreRows[g].length >= 3).slice(0, 6);
+
+    appContainer.innerHTML = `
+        <div class="px-4 sm:px-6 pt-4 pb-2">
+            <div class="relative">
+                <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-secondary text-sm"></i>
+                <input id="home-search" type="text" placeholder="Buscar películas, series..." 
+                    class="w-full bg-[#141c2f] border border-white/5 rounded-xl pl-11 pr-10 py-2.5 text-sm text-white placeholder-secondary outline-none focus:border-accent transition-colors"
+                    onkeyup="if(event.key === 'Enter') { state.searchFilter.query = this.value; window.location.hash = 'explore'; }">
+            </div>
+        </div>
+
+        <div class="px-4 sm:px-6 flex items-center gap-6 border-b border-white/5 text-sm font-medium overflow-x-auto hide-scrollbar">
+            <a href="#home" class="text-accent border-b-2 border-accent pb-2 whitespace-nowrap">Inicio</a>
+            <a href="#movies" class="text-secondary hover:text-white pb-2 whitespace-nowrap">Películas</a>
+            <a href="#series" class="text-secondary hover:text-white pb-2 whitespace-nowrap">Series</a>
+            <a href="#popular" class="text-secondary hover:text-white pb-2 whitespace-nowrap">Popular</a>
+        </div>
+
+        ${heroItems.length > 0 ? `
+        <div id="hero-slider" class="relative w-full aspect-[4/5] sm:aspect-video md:aspect-[21/9] max-h-[500px] overflow-hidden mt-2">
+            ${heroItems.map((item, i) => `
+                <div class="hero-slide ${i === 0 ? 'active' : ''}" data-index="${i}">
+                    <img src="${getBackdropUrl(item)}" class="absolute inset-0 w-full h-full object-cover" alt="">
+                    <div class="absolute inset-0 hero-gradient"></div>
+                    <div class="absolute inset-0 hero-gradient-left"></div>
+                    <div class="relative h-full flex flex-col justify-end sm:justify-center p-6 sm:p-12 md:p-16 max-w-3xl">
+                        <span class="text-[10px] text-accent font-bold uppercase tracking-widest mb-2 flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 rounded-full bg-accent"></span> Destacada
+                        </span>
+                        <h1 class="text-3xl sm:text-5xl font-black text-white mb-3 leading-tight drop-shadow-lg">${escapeHtml(item.title)}</h1>
+                        <div class="flex items-center gap-3 text-xs sm:text-sm text-white/80 mb-6">
+                            ${item.year ? `<span>${item.year}</span>` : ''}
+                            ${item.rating ? `<span class="flex items-center gap-1"><i class="fa-solid fa-star text-yellow-400"></i>${item.rating.toFixed(1)}</span>` : ''}
+                            <span class="px-2 py-0.5 rounded bg-white/10 text-[10px] uppercase font-bold">${item.type === 'tv' ? 'Serie' : 'Película'}</span>
+                        </div>
+                        <div class="flex gap-3">
+                            <a href="#watch/${item.type}/${item.tmdbId}" class="bg-white text-black font-bold px-6 py-3 rounded-xl flex items-center gap-2 hover:bg-gray-200 transition-colors text-sm shadow-xl">
+                                <i class="fa-solid fa-play"></i> Reproducir
+                            </a>
+                            <a href="#detail/${item.type}/${item.tmdbId}" class="glass-btn text-white font-medium px-6 py-3 rounded-xl flex items-center gap-2 hover:bg-white/20 transition-colors text-sm">
+                                <i class="fa-solid fa-circle-info"></i> Más Info
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            `).join('')}
+            
+            ${heroItems.length > 1 ? `
+                <div class="absolute bottom-6 right-6 flex gap-2 z-20">
+                    ${heroItems.map((_, i) => `
+                        <button onclick="goToHeroSlide(${i})" data-dot="${i}" class="hero-dot w-2 h-2 rounded-full bg-white/30 ${i === 0 ? '!w-6 !bg-accent' : ''}"></button>
+                    `).join('')}
+                </div>
+            ` : ''}
+        </div>
+        ` : ''}
+
+        <div class="pb-8 mt-4">
+            ${recentMovies.length > 0 ? buildRow('Películas Recién Agregadas', recentMovies, 'movies') : ''}
+            ${recentSeries.length > 0 ? buildRow('Series Recién Agregadas', recentSeries, 'series') : ''}
+            ${topRated.length > 0 ? buildRow('Mejor Valoradas', topRated, 'popular') : ''}
+            
+            ${validGenres.map(genre => 
+                buildRow(genre, genreRows[genre].slice(0, 10), `explore?genre=${genre}`)
+            ).join('')}
+        </div>
+    `;
+
+    if (heroItems.length > 0) initHeroSlider(heroItems.length);
+}
+
+function initHeroSlider(total) {
+    if (state.heroTimer) clearInterval(state.heroTimer);
+    state.heroTimer = setInterval(() => {
+        state.currentHeroIndex = (state.currentHeroIndex + 1) % total;
+        applyHeroSlide();
+    }, 6000);
+}
+
+function goToHeroSlide(index) {
+    state.currentHeroIndex = index;
+    applyHeroSlide();
+    if (state.heroTimer) clearInterval(state.heroTimer);
+    const total = document.querySelectorAll('.hero-slide').length;
+    state.heroTimer = setInterval(() => {
+        state.currentHeroIndex = (state.currentHeroIndex + 1) % total;
+        applyHeroSlide();
+    }, 6000);
+}
+
+function applyHeroSlide() {
+    document.querySelectorAll('.hero-slide').forEach((el, i) => {
+        el.classList.toggle('active', i === state.currentHeroIndex);
+    });
+    document.querySelectorAll('.hero-dot').forEach((el, i) => {
+        if (i === state.currentHeroIndex) el.className = 'hero-dot w-6 h-2 rounded-full bg-accent';
+        else el.className = 'hero-dot w-2 h-2 rounded-full bg-white/30';
+    });
+}
+
+function movieCard(item, size = 'small') {
+    const poster = getPosterUrl(item, size === 'large' ? 'w500' : 'w342');
+    const w = size === 'large' ? 'w-full' : 'w-36 sm:w-40 md:w-44 lg:w-48';
+    const isFav = isFavorite(item);
+
+    return `
+        <a href="#detail/${item.type}/${item.tmdbId}" class="movie-card card-tap block ${w} group">
+            <div class="relative aspect-[2/3] rounded-xl overflow-hidden bg-cardBg shadow-lg ring-1 ring-white/5">
+                <img src="${poster}" class="poster-img w-full h-full object-cover" loading="lazy">
+                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div class="play-overlay absolute inset-0 flex items-center justify-center bg-black/20 opacity-0">
+                    <div class="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md border border-white/40 flex items-center justify-center shadow-lg">
+                        <i class="fa-solid fa-play text-white text-lg ml-1"></i>
+                    </div>
+                </div>
+                ${item.rating ? `<span class="absolute top-2 right-2 text-[10px] font-bold bg-black/70 backdrop-blur-sm text-yellow-400 px-2 py-1 rounded flex items-center gap-1"><i class="fa-solid fa-star text-[8px]"></i>${item.rating.toFixed(1)}</span>` : ''}
+                ${isFav ? `<span class="absolute top-2 left-2 w-6 h-6 rounded-full bg-accent flex items-center justify-center"><i class="fa-solid fa-bookmark text-white text-[10px]"></i></span>` : ''}
+                ${item.type === 'tv' ? `<span class="absolute bottom-2 left-2 text-[9px] font-bold bg-appleBlue text-white px-2 py-0.5 rounded uppercase tracking-wider">Serie</span>` : ''}
+            </div>
+            <h4 class="text-sm font-semibold text-white mt-3 line-clamp-1 group-hover:text-accent transition-colors">${escapeHtml(item.title)}</h4>
+            <p class="text-[11px] text-secondary mt-0.5 line-clamp-1">${item.year || ''} ${item.genre ? '· '+item.genre : ''}</p>
+        </a>
+    `;
+}
+
+function buildRow(title, items, route) {
+    if (!items.length) return '';
+    return `
+        <section class="mb-8">
+            <div class="flex items-center justify-between mb-3 px-4 sm:px-6">
+                <h2 class="text-lg sm:text-xl font-bold text-white tracking-tight">${escapeHtml(title)}</h2>
+                <a href="#${route}" class="text-xs font-medium text-secondary hover:text-white transition-colors flex items-center gap-1">Ver todo <i class="fa-solid fa-chevron-right text-[10px]"></i></a>
+            </div>
+            <div class="row-scroll hide-scrollbar">
+                ${items.map(i => movieCard(i)).join('')}
+            </div>
+        </section>
+    `;
+}
+
+// ============================================================
+// EXPLORAR
+// ============================================================
+function renderExplore() {
+    updateHeader(false);
+
+    const { genre, year, query, type } = state.searchFilter;
+
+    let filtered = [...state.catalog];
+    if (type !== 'all') filtered = filtered.filter(x => x.type === type);
+    if (genre) filtered = filtered.filter(x => x.genre === genre);
+    if (year) filtered = filtered.filter(x => x.year === year);
+    if (query) {
+        const q = query.toLowerCase();
+        filtered = filtered.filter(x => x.title.toLowerCase().includes(q));
+    }
+
+    if (!query && !genre && type === 'all') {
+        filtered.sort((a,b) => b.rating - a.rating);
+    }
+
+    appContainer.innerHTML = `
+        <main class="px-4 sm:px-6 max-w-[1600px] mx-auto pb-10 min-h-screen fade-in pt-4">
+            <h1 class="text-2xl sm:text-3xl font-black mb-4">Explorar</h1>
+
+            <div class="relative mb-6">
+                <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-secondary"></i>
+                <input id="search-input" type="text" placeholder="Buscar películas o series..." value="${escapeHtml(query)}"
+                    class="w-full bg-[#141c2f] border border-white/5 rounded-xl pl-11 pr-4 py-3 text-white placeholder-secondary outline-none focus:border-accent transition-colors">
+            </div>
+
+            <div class="flex gap-2 overflow-x-auto hide-scrollbar pb-4 mb-4">
+                <button onclick="setFilter('type','all')" class="flex-shrink-0 px-4 py-2 rounded-lg text-xs font-medium transition-colors ${type === 'all' ? 'bg-accent text-white' : 'bg-[#141c2f] text-secondary border border-white/5 hover:text-white'}">Todo</button>
+                <button onclick="setFilter('type','movie')" class="flex-shrink-0 px-4 py-2 rounded-lg text-xs font-medium transition-colors ${type === 'movie' ? 'bg-accent text-white' : 'bg-[#141c2f] text-secondary border border-white/5 hover:text-white'}">Películas</button>
+                <button onclick="setFilter('type','tv')" class="flex-shrink-0 px-4 py-2 rounded-lg text-xs font-medium transition-colors ${type === 'tv' ? 'bg-accent text-white' : 'bg-[#141c2f] text-secondary border border-white/5 hover:text-white'}">Series</button>
+            </div>
+
+            <div class="flex gap-2 overflow-x-auto hide-scrollbar pb-4 mb-6">
+                <button onclick="setFilter('genre',null)" class="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${!genre ? 'bg-white text-black' : 'bg-[#141c2f] text-secondary border border-white/5 hover:text-white'}">Todos</button>
+                ${GENRES_LIST.slice(0, 10).map(g => `
+                    <button onclick="setFilter('genre','${g}')" class="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${genre === g ? 'bg-white text-black' : 'bg-[#141c2f] text-secondary border border-white/5 hover:text-white'}">${g}</button>
+                `).join('')}
+            </div>
+
+            <p class="text-sm text-secondary mb-4">${filtered.length} resultados encontrados</p>
+
+            ${filtered.length === 0 ? `
+                <div class="flex flex-col items-center justify-center mt-20 text-center">
+                    <i class="fa-solid fa-film text-4xl text-secondary/30 mb-3"></i>
+                    <p class="text-secondary text-sm">Sin resultados para estos filtros.</p>
+                </div>
+            ` : `
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-3 gap-y-6">
+                    ${filtered.map(m => movieCard(m, 'large')).join('')}
+                </div>
+            `}
+        </main>
+    `;
+
+    const input = document.getElementById('search-input');
+    let timeout;
+    input.addEventListener('input', (e) => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => {
+            state.searchFilter.query = e.target.value;
+            const cursor = e.target.selectionStart;
+            renderExplore();
+            const newInput = document.getElementById('search-input');
+            newInput.focus();
+            newInput.setSelectionRange(cursor, cursor);
+        }, 300);
+    });
+}
+
+function setFilter(key, value) {
+    state.searchFilter[key] = value;
+    renderExplore();
+}
+
+// ============================================================
+// CATÁLOGO
+// ============================================================
+function renderMoviesPage() { renderCategoryPage('movie', 'Películas'); }
+function renderSeriesPage() { renderCategoryPage('tv', 'Series'); }
+function renderPopularPage() { 
+    updateHeader(false);
+    const sorted = [...state.catalog].sort((a,b) => b.rating - a.rating);
+    
+    appContainer.innerHTML = `
+        <main class="px-4 sm:px-6 max-w-[1600px] mx-auto pb-10 min-h-screen fade-in pt-4">
+            <h1 class="text-2xl sm:text-3xl font-black mb-1">Populares</h1>
+            <p class="text-xs text-secondary mb-6">Basado en las mejores valoraciones</p>
+            
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-3 gap-y-6">
+                ${sorted.map(m => movieCard(m, 'large')).join('')}
+            </div>
+        </main>
+    `;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function renderCategoryPage(type, title) {
+    updateHeader(false);
+
+    const perPage = 40;
+    const filtered = state.catalog.filter(x => x.type === type);
+    const total = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(total / perPage));
+    const page = Math.min(state.moviesPage, totalPages);
+    const start = (page - 1) * perPage;
+    const displayed = filtered.slice(start, start + perPage);
+
+    appContainer.innerHTML = `
+        <main class="px-4 sm:px-6 max-w-[1600px] mx-auto pb-10 min-h-screen fade-in pt-4">
+            <h1 class="text-2xl sm:text-3xl font-black mb-1">${title}</h1>
+            <p class="text-xs text-secondary mb-6">${total} títulos disponibles</p>
+
+            ${total === 0 ? `
+                <div class="flex flex-col items-center justify-center mt-20 text-center">
+                    <i class="fa-solid fa-film text-4xl text-secondary/30 mb-3"></i>
+                    <p class="text-secondary text-sm mb-4">No hay ${title.toLowerCase()} en el catálogo.</p>
+                    <button onclick="openAdminLogin()" class="bg-accent text-white font-bold px-6 py-3 rounded-xl flex items-center gap-2 hover:bg-orange-600 transition-colors shadow-lg shadow-accent/30">
+                        <i class="fa-solid fa-plus"></i> Agregar Contenido
+                    </button>
+                </div>
+            ` : `
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-3 gap-y-6 mb-10">
+                    ${displayed.map(m => movieCard(m, 'large')).join('')}
+                </div>
+
+                ${totalPages > 1 ? `
+                    <div class="flex items-center justify-center gap-3 pb-8">
+                        <button onclick="changePage(-1)" ${page === 1 ? 'disabled' : ''} 
+                            class="px-4 py-2.5 rounded-lg ${page === 1 ? 'bg-[#141c2f] text-secondary/40' : 'bg-[#141c2f] text-white hover:bg-cardHover'} border border-white/5 font-medium text-sm flex items-center gap-2">
+                            <i class="fa-solid fa-chevron-left"></i> Ant
+                        </button>
+                        <span class="text-sm text-secondary px-4">${page} / ${totalPages}</span>
+                        <button onclick="changePage(1)" ${page === totalPages ? 'disabled' : ''} 
+                            class="px-4 py-2.5 rounded-lg ${page === totalPages ? 'bg-[#141c2f] text-secondary/40' : 'bg-[#141c2f] text-white hover:bg-cardHover'} border border-white/5 font-medium text-sm flex items-center gap-2">
+                            Sig <i class="fa-solid fa-chevron-right"></i>
+                        </button>
+                    </div>
+                ` : ''}
+            `}
+        </main>
+    `;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function changePage(delta) {
+    const totalPages = Math.max(1, Math.ceil(state.catalog.length / 40));
+    state.moviesPage = Math.max(1, Math.min(totalPages, state.moviesPage + delta));
+    if (state.lastRoute === 'movies') renderMoviesPage();
+    else if (state.lastRoute === 'series') renderSeriesPage();
+    else renderMoviesPage();
+}
+
+// ============================================================
+// MI LISTA
+// ============================================================
+function renderMyList() {
+    updateHeader(false);
+    const favs = state.favorites;
+
+    appContainer.innerHTML = `
+        <main class="px-4 sm:px-6 max-w-[1600px] mx-auto pb-10 min-h-screen fade-in pt-4">
+            <h1 class="text-2xl sm:text-3xl font-black mb-6">Mi Lista</h1>
+            ${favs.length === 0 ? `
+                <div class="flex flex-col items-center justify-center mt-20 text-center">
+                    <div class="w-16 h-16 rounded-full bg-[#141c2f] flex items-center justify-center mb-4">
+                        <i class="fa-regular fa-bookmark text-2xl text-secondary"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-1">Tu lista está vacía</h3>
+                    <p class="text-sm text-secondary">Guarda tus títulos favoritos para verlos después.</p>
+                </div>
+            ` : `
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-3 gap-y-6">
+                    ${favs.map(m => movieCard(m, 'large')).join('')}
+                </div>
+            `}
+        </main>
+    `;
+}
+
+// ============================================================
+// DETALLE
+// ============================================================
+function renderDetail(type, tmdbId) {
+    updateHeader(true);
+    const items = state.catalog.filter(x => x.tmdbId == tmdbId && x.type === type);
+    if (items.length === 0) {
+        appContainer.innerHTML = '<div class="p-8 text-center text-red-500 mt-20">Contenido no encontrado.</div>';
+        return;
+    }
+    const item = items[0];
+    state.currentItem = item;
+    const isFav = isFavorite(item);
+
+    appContainer.innerHTML = `
+        <div class="relative w-full">
+            <div class="relative w-full aspect-[3/4] sm:aspect-[16/9] max-h-[70vh] overflow-hidden">
+                <img src="${getBackdropUrl(item)}" class="absolute inset-0 w-full h-full object-cover" alt="">
+                <div class="absolute inset-0 hero-gradient"></div>
+                <div class="absolute inset-0 hero-gradient-left"></div>
+
+                <div class="relative h-full flex flex-col justify-end px-4 sm:px-8 pb-10 max-w-[1600px] mx-auto w-full">
+                    <div class="flex gap-5 items-end">
+                        <img src="${getPosterUrl(item, 'w342')}" class="w-32 sm:w-44 aspect-[2/3] object-cover rounded-xl shadow-2xl border border-white/10 flex-shrink-0 hidden sm:block">
+                        <div class="flex-1 min-w-0">
+                            <h1 class="text-3xl sm:text-5xl font-black text-white mb-3 leading-tight drop-shadow-lg">${escapeHtml(item.title)}</h1>
+                            <div class="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-white/80 mb-5">
+                                ${item.year ? `<span>${item.year}</span>` : ''}
+                                ${item.rating ? `<span class="flex items-center gap-1"><i class="fa-solid fa-star text-yellow-400"></i>${item.rating.toFixed(1)}</span>` : ''}
+                                <span class="px-2 py-0.5 rounded bg-white/10 text-[10px] uppercase font-bold">${item.type === 'tv' ? 'Serie' : 'Película'}</span>
+                                ${item.type === 'tv' ? `<span class="text-accent font-bold">${item.episodes?.length || 0} Episodios</span>` : ''}
+                            </div>
+                            <div class="flex gap-3 flex-wrap">
+                                <a href="#watch/${item.type}/${item.tmdbId}" class="bg-white text-black font-bold px-6 py-3 rounded-xl flex items-center gap-2 hover:bg-gray-200 transition-colors text-sm shadow-xl">
+                                    <i class="fa-solid fa-play"></i> Reproducir
+                                </a>
+                                <button onclick="toggleFavDetail('${item.type}','${item.tmdbId}')" id="btn-fav-detail"
+                                    class="glass-btn text-white font-medium px-5 py-3 rounded-xl flex items-center gap-2 hover:bg-white/20 transition-colors text-sm">
+                                    ${isFav ? '<i class="fa-solid fa-bookmark text-accent"></i> Guardada' : '<i class="fa-regular fa-bookmark"></i> Mi Lista'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <main class="px-4 sm:px-8 max-w-[1600px] mx-auto pb-10 pt-6">
+                ${item.overview ? `<p class="text-sm sm:text-base text-secondary leading-relaxed mb-8 max-w-4xl">${escapeHtml(item.overview)}</p>` : ''}
+            </main>
+        </div>
+    `;
+}
+
+function toggleFavDetail(type, tmdbId) {
+    const item = state.catalog.find(x => x.tmdbId == tmdbId && x.type === type);
+    if (!item) return;
+    toggleFavorite(item);
+    const isFav = isFavorite(item);
+    const btn = document.getElementById('btn-fav-detail');
+    if (btn) {
+        btn.innerHTML = isFav ? '<i class="fa-solid fa-bookmark text-accent"></i> Guardada' : '<i class="fa-regular fa-bookmark"></i> Mi Lista';
+    }
+}
+
+// ============================================================
+// REPRODUCTOR
+// ============================================================
+function renderWatch(type, tmdbId) {
+    updateHeader(true);
+    const items = state.catalog.filter(x => x.tmdbId == tmdbId && x.type === type);
+    if (items.length === 0) {
+        appContainer.innerHTML = '<div class="p-8 text-center text-red-500 mt-20">Contenido no encontrado.</div>';
+        return;
+    }
+    
+    let item = items[0];
+    
+    if (item.type === 'tv' && item.episodes && item.episodes.length > 0) {
+        renderSeriesPlayer(item, 0);
+    } else {
+        renderMoviePlayer(item);
+    }
+}
+
+function renderMoviePlayer(item) {
+    if (!item.videoUrl) {
+        appContainer.innerHTML = `
+            <div class="p-8 text-center mt-20">
+                <p class="text-white text-lg font-bold mb-2">Video no disponible</p>
+                <p class="text-secondary text-sm mb-6">Esta película no tiene una URL de video configurada.</p>
+                <a href="#detail/${item.type}/${item.tmdbId}" class="inline-block bg-white text-black font-bold px-6 py-3 rounded-xl">Volver al detalle</a>
+            </div>
+        `;
+        return;
+    }
+
+    appContainer.innerHTML = `
+        <main class="px-4 sm:px-6 max-w-5xl mx-auto pb-10 fade-in pt-4">
+            <div class="mb-4">
+                <h1 class="text-xl font-black text-white mb-1 line-clamp-2">${escapeHtml(item.title)}</h1>
+                <p class="text-xs text-secondary">${item.year || ''} ${item.genre ? '· ' + item.genre : ''}</p>
+            </div>
+
+            <div id="player-wrapper" class="relative w-full aspect-video bg-black rounded-xl overflow-hidden shadow-2xl mb-6 border border-white/10">
+                <video id="main-player" playsinline preload="metadata" webkit-playsinline 
+                    poster="${getBackdropUrl(item)}" 
+                    class="w-full h-full object-contain block bg-black">
+                    <source src="${item.videoUrl}" type="video/mp4">
+                    Tu navegador no soporta video HTML5.
+                </video>
+
+                <button id="big-play" type="button" class="absolute inset-0 flex items-center justify-center bg-black/20 transition-opacity duration-200 z-10">
+                    <div class="w-16 h-16 rounded-full bg-accent flex items-center justify-center shadow-lg shadow-accent/50">
+                        <i id="big-play-icon" class="fa-solid fa-play text-white text-xl" style="margin-left:4px;"></i>
+                    </div>
+                </button>
+
+                <div id="custom-controls" class="absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-black/90 via-black/50 to-transparent px-3 pt-6 pb-3">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span id="time-current" class="text-[10px] text-white font-medium tabular-nums w-8 text-center">0:00</span>
+                        <input id="seek-bar" type="range" min="0" max="1000" value="0" step="1"
+                            class="flex-1 h-1 rounded-full outline-none cursor-pointer"
+                            style="background:linear-gradient(to right,#ff6b00 0%,rgba(255,255,255,.25) 0%);">
+                        <span id="time-total" class="text-[10px] text-white font-medium tabular-nums w-8 text-center">0:00</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <button type="button" id="btn-play" class="text-white hover:text-accent p-1">
+                                <i id="btn-play-icon" class="fa-solid fa-play text-base"></i>
+                            </button>
+                            <button type="button" id="btn-back10" class="text-white hover:text-accent p-1">
+                                <i class="fa-solid fa-rotate-left text-sm"></i>
+                            </button>
+                            <button type="button" id="btn-fwd10" class="text-white hover:text-accent p-1">
+                                <i class="fa-solid fa-rotate-right text-sm"></i>
+                            </button>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button type="button" id="btn-fs" class="text-white hover:text-accent p-1">
+                                <i id="btn-fs-icon" class="fa-solid fa-expand text-sm"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            ${item.overview ? `<p class="text-sm text-secondary leading-relaxed">${escapeHtml(item.overview)}</p>` : ''}
+        </main>
+    `;
+
+    initBasicPlayer(item.videoUrl);
+}
+
+function renderSeriesPlayer(item, epIndex) {
+    const ep = item.episodes[epIndex];
+    if (!ep) return;
+
+    appContainer.innerHTML = `
+        <main class="px-4 sm:px-6 max-w-6xl mx-auto pb-10 fade-in pt-4">
+            <div class="mb-4 flex items-start justify-between gap-4 flex-wrap">
+                <div>
+                    <h1 class="text-xl font-black text-white mb-1 line-clamp-2">${escapeHtml(item.title)}</h1>
+                    <p class="text-xs text-accent font-bold mt-1">Temporada ${ep.season} · Episodio ${ep.episode}</p>
+                </div>
+            </div>
+
+            <div id="player-wrapper" class="relative w-full aspect-video bg-black rounded-xl overflow-hidden shadow-2xl mb-6 border border-white/10">
+                <video id="main-player" playsinline preload="metadata" webkit-playsinline 
+                    poster="${getBackdropUrl(item)}" 
+                    class="w-full h-full object-contain block bg-black">
+                    <source src="${ep.url}" type="video/mp4">
+                    Tu navegador no soporta video HTML5.
+                </video>
+
+                <button id="big-play" type="button" class="absolute inset-0 flex items-center justify-center bg-black/20 transition-opacity duration-200 z-10">
+                    <div class="w-16 h-16 rounded-full bg-accent flex items-center justify-center shadow-lg shadow-accent/50">
+                        <i id="big-play-icon" class="fa-solid fa-play text-white text-xl" style="margin-left:4px;"></i>
+                    </div>
+                </button>
+
+                <div id="custom-controls" class="absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-black/90 via-black/50 to-transparent px-3 pt-6 pb-3">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span id="time-current" class="text-[10px] text-white font-medium tabular-nums w-8 text-center">0:00</span>
+                        <input id="seek-bar" type="range" min="0" max="1000" value="0" step="1"
+                            class="flex-1 h-1 rounded-full outline-none cursor-pointer"
+                            style="background:linear-gradient(to right,#ff6b00 0%,rgba(255,255,255,.25) 0%);">
+                        <span id="time-total" class="text-[10px] text-white font-medium tabular-nums w-8 text-center">0:00</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <button type="button" id="btn-play" class="text-white hover:text-accent p-1">
+                                <i id="btn-play-icon" class="fa-solid fa-play text-base"></i>
+                            </button>
+                            <button type="button" id="btn-back10" class="text-white hover:text-accent p-1">
+                                <i class="fa-solid fa-rotate-left text-sm"></i>
+                            </button>
+                            <button type="button" id="btn-fwd10" class="text-white hover:text-accent p-1">
+                                <i class="fa-solid fa-rotate-right text-sm"></i>
+                            </button>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button type="button" id="btn-fs" class="text-white hover:text-accent p-1">
+                                <i id="btn-fs-icon" class="fa-solid fa-expand text-sm"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-[#141c2f] rounded-xl p-4 mb-6 border border-white/5">
+                <p class="text-xs text-secondary uppercase font-bold mb-3">Episodios</p>
+                <div class="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
+                    ${item.episodes.map((e, i) => `
+                        <button onclick="renderSeriesPlayer(state.currentItem, ${i})" 
+                            class="py-2 rounded-lg text-xs font-medium transition-colors ${i === epIndex ? 'bg-accent text-white' : 'bg-black/30 text-secondary hover:text-white border border-white/5'}">
+                            T${e.season} E${e.episode}
+                        </button>
+                    `).join('')}
+                </div>
+            </div>
+
+            ${item.overview ? `<p class="text-sm text-secondary leading-relaxed">${escapeHtml(item.overview)}</p>` : ''}
+        </main>
+    `;
+
+    initBasicPlayer(ep.url);
+}
+
+function initBasicPlayer(url) {
+    const videoEl = document.getElementById('main-player');
+    if (!videoEl) return;
+
+    const bigPlay = document.getElementById('big-play');
+    const btnPlay = document.getElementById('btn-play');
+    const btnPlayIco = document.getElementById('btn-play-icon');
+    const btnBack10 = document.getElementById('btn-back10');
+    const btnFwd10 = document.getElementById('btn-fwd10');
+    const btnFs = document.getElementById('btn-fs');
+    const seekBar = document.getElementById('seek-bar');
+    const timeCur = document.getElementById('time-current');
+    const timeTot = document.getElementById('time-total');
+
+    const fmtTime = (s) => {
+        if (isNaN(s) || s < 0) return '0:00';
+        const h = Math.floor(s / 3600);
+        const m = Math.floor((s % 3600) / 60);
+        const sec = Math.floor(s % 60).toString().padStart(2, '0');
+        if (h > 0) return `${h}:${m.toString().padStart(2,'0')}:${sec}`;
+        return `${m}:${sec}`;
+    };
+
+    const paintSeek = () => {
+        const pct = videoEl.duration ? (videoEl.currentTime / videoEl.duration) * 100 : 0;
+        seekBar.style.background = `linear-gradient(to right, #ff6b00 ${pct}%, rgba(255,255,255,0.25) ${pct}%)`;
+    };
+    const doPlayPause = () => {
+        if (videoEl.paused) videoEl.play().catch(()=>{});
+        else videoEl.pause();
+    };
+
+    videoEl.addEventListener('loadedmetadata', () => {
+        timeTot.textContent = fmtTime(videoEl.duration);
+        paintSeek();
+    });
+
+    videoEl.addEventListener('timeupdate', () => {
+        timeCur.textContent = fmtTime(videoEl.currentTime);
+        if (!seekBar.dataset.dragging) {
+            seekBar.value = videoEl.duration ? (videoEl.currentTime / videoEl.duration) * 1000 : 0;
+            paintSeek();
+        }
+    });
+
+    videoEl.addEventListener('play', () => {
+        btnPlayIco.className = 'fa-solid fa-pause text-base';
+        bigPlay.style.opacity = '0';
+        bigPlay.style.pointerEvents = 'none';
+    });
+    videoEl.addEventListener('pause', () => {
+        btnPlayIco.className = 'fa-solid fa-play text-base';
+        bigPlay.style.opacity = '1';
+        bigPlay.style.pointerEvents = 'auto';
+    });
+
+    bigPlay.addEventListener('click', (e) => { e.stopPropagation(); doPlayPause(); });
+    btnPlay.addEventListener('click', (e) => { e.stopPropagation(); doPlayPause(); });
+    btnBack10.addEventListener('click', (e) => { e.stopPropagation(); videoEl.currentTime = Math.max(0, videoEl.currentTime - 10); });
+    btnFwd10.addEventListener('click', (e) => { e.stopPropagation(); videoEl.currentTime = Math.min(videoEl.duration || 0, videoEl.currentTime + 10); });
+
+    seekBar.addEventListener('pointerdown', () => { seekBar.dataset.dragging = '1'; });
+    seekBar.addEventListener('input', (e) => {
+        e.stopPropagation();
+        const pct = e.target.value / 1000;
+        if (videoEl.duration) videoEl.currentTime = pct * videoEl.duration;
+        paintSeek();
+        timeCur.textContent = fmtTime(videoEl.currentTime);
+    });
+    seekBar.addEventListener('pointerup', () => { delete seekBar.dataset.dragging; });
+    seekBar.addEventListener('change', () => { delete seekBar.dataset.dragging; });
+
+    btnFs.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (document.fullscreenElement) document.exitFullscreen();
+        else videoEl.requestFullscreen();
+    });
+    paintSeek();
+}
+
+// ============================================================
+// PANEL ADMIN
+// ============================================================
+function renderAdmin() {
+    if (!state.isAdmin) { window.location.hash = 'home'; return; }
+    updateHeader(false);
+
+    const groups = {};
+    state.catalog.forEach(item => {
+        const k = (item.title || '').toLowerCase() + '|' + (item.year || '');
+        if (!groups[k]) groups[k] = [];
+        groups[k].push(item);
+    });
+    const dupGroups = Object.entries(groups).filter(([_, arr]) => arr.length > 1);
+    const totalExtra = dupGroups.reduce((sum, [_, arr]) => sum + (arr.length - 1), 0);
+
+    appContainer.innerHTML = `
+        <main class="px-4 sm:px-6 max-w-6xl mx-auto pb-10 min-h-screen fade-in pt-4">
+            <div class="flex items-center justify-between mb-6 flex-wrap gap-3">
+                <div>
+                    <h1 class="text-2xl sm:text-3xl font-black">Admin Panel</h1>
+                    <p class="text-xs text-secondary mt-1">${state.catalog.length} títulos en catálogo</p>
+                </div>
+            </div>
+
+            ${!state.dbAvailable ? `
+                <div class="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 mb-6">
+                    <p class="text-xs text-amber-200"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Base de datos no disponible. Los cambios se perderán al recargar.</p>
+                </div>
+            ` : ''}
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+                <div class="bg-[#141c2f] rounded-xl p-4 border border-white/5">
+                    <p class="text-[10px] text-secondary uppercase font-bold mb-1">Total</p>
+                    <p class="text-xl font-black text-white">${state.catalog.length}</p>
+                </div>
+                <div class="bg-[#141c2f] rounded-xl p-4 border border-white/5">
+                    <p class="text-[10px] text-secondary uppercase font-bold mb-1">Películas</p>
+                    <p class="text-xl font-black text-white">${state.catalog.filter(x => x.type === 'movie').length}</p>
+                </div>
+                <div class="bg-[#141c2f] rounded-xl p-4 border border-white/5">
+                    <p class="text-[10px] text-secondary uppercase font-bold mb-1">Series</p>
+                    <p class="text-xl font-black text-white">${state.catalog.filter(x => x.type === 'tv').length}</p>
+                </div>
+                <div class="bg-[#141c2f] rounded-xl p-4 border border-white/5">
+                    <p class="text-[10px] text-secondary uppercase font-bold mb-1">Episodios</p>
+                    <p class="text-xl font-black text-white">${state.catalog.filter(x => x.type === 'tv').reduce((acc, curr) => acc + (curr.episodes?.length || 0), 0)}</p>
+                </div>
+            </div>
+
+            <div class="flex gap-2 flex-wrap mb-6">
+                <button onclick="adminLogout()" class="px-4 py-2.5 rounded-xl bg-[#141c2f] border border-white/5 text-secondary hover:text-white font-medium text-xs flex items-center gap-2 transition-colors">
+                    <i class="fa-solid fa-right-from-bracket"></i> Salir
+                </button>
+                <button onclick="openImportModal()" class="px-5 py-2.5 rounded-xl bg-appleBlue text-white font-bold text-xs flex items-center gap-2 hover:bg-blue-600 transition-colors shadow-lg shadow-appleBlue/20">
+                    <i class="fa-solid fa-file-import"></i> Importar TXT
+                </button>
+                <button onclick="openAddModal()" class="px-5 py-2.5 rounded-xl bg-accent text-white font-bold text-xs flex items-center gap-2 hover:bg-orange-600 transition-colors shadow-lg shadow-accent/20">
+                    <i class="fa-solid fa-plus"></i> Agregar Manual
+                </button>
+                <button onclick="confirmClearCatalog()" class="px-5 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 font-bold text-xs flex items-center gap-2 hover:bg-red-500/20 transition-colors">
+                    <i class="fa-solid fa-trash"></i> Limpiar Todo
+                </button>
+            </div>
+
+            ${state.catalog.length === 0 ? `
+                <div class="bg-[#141c2f] rounded-2xl p-12 text-center border border-white/5">
+                    <i class="fa-solid fa-inbox text-5xl text-secondary/30 mb-4"></i>
+                    <h3 class="text-lg font-bold text-white mb-2">Catálogo vacío</h3>
+                    <p class="text-secondary text-sm mb-6">Comienza importando un TXT o agregando manualmente.</p>
+                </div>
+            ` : `
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    ${state.catalog.slice(0, 100).map(item => adminItemCard(item)).join('')}
+                </div>
+                ${state.catalog.length > 100 ? `<p class="text-center text-secondary text-xs mt-6">Mostrando primeros 100 de ${state.catalog.length} títulos.</p>` : ''}
+            `}
+        </main>
+
+        <div id="add-modal" class="fixed inset-0 z-[250] hidden admin-modal overflow-y-auto">
+            <div class="min-h-full flex items-start sm:items-center justify-center p-4">
+                <div class="bg-[#141c2f] rounded-2xl w-full max-w-2xl border border-white/10 max-h-[90vh] flex flex-col">
+                    <div class="flex items-center justify-between p-5 border-b border-white/5">
+                        <h3 class="text-lg font-bold text-white"><i class="fa-solid fa-plus text-accent mr-2"></i>Agregar Título</h3>
+                        <button onclick="closeAddModal()" class="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-secondary hover:text-white transition-colors">
+                            <i class="fa-solid fa-times text-sm"></i>
+                        </button>
+                    </div>
+                    <div class="overflow-y-auto admin-scroll p-5 flex-1">
+                        <div id="admin-search-section">
+                            <label class="text-[10px] text-secondary uppercase font-bold mb-2 block">Buscar en TMDB</label>
+                            <div class="relative mb-4">
+                                <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-secondary"></i>
+                                <input id="admin-search-input" type="text" placeholder="Escribe un título y presiona Enter..."
+                                    class="w-full bg-black/30 border border-white/10 rounded-xl pl-11 pr-4 py-3 text-white placeholder-secondary outline-none focus:border-accent transition-colors text-sm">
+                            </div>
+                            <div id="admin-search-results" class="space-y-2 max-h-96 overflow-y-auto admin-scroll"></div>
+                        </div>
+                        <div id="admin-form-section" class="hidden">
+                            <button onclick="backToSearch()" class="text-xs text-secondary hover:text-white mb-4 flex items-center gap-1">
+                                <i class="fa-solid fa-arrow-left"></i> Volver a buscar
+                            </button>
+                            <div id="admin-selected-info" class="mb-4"></div>
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="text-[10px] text-secondary uppercase font-bold mb-1 block">URL del Video *</label>
+                                    <input id="admin-video-url" type="text" placeholder="http://... o https://..."
+                                        class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-secondary outline-none focus:border-accent transition-colors text-sm font-mono">
+                                </div>
+                                <div>
+                                    <label class="text-[10px] text-secondary uppercase font-bold mb-1 block">Género</label>
+                                    <select id="admin-genre" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-accent transition-colors text-sm">
+                                        <option value="">— Selecciona —</option>
+                                        ${GENRES_LIST.map(g => `<option value="${g}">${g}</option>`).join('')}
+                                    </select>
+                                </div>
+                                <label class="flex items-center gap-3 p-3 rounded-xl bg-black/30 border border-white/10 cursor-pointer hover:bg-black/50 transition-colors">
+                                    <input id="admin-is-hero" type="checkbox" class="w-4 h-4 rounded accent-accent">
+                                    <div>
+                                        <p class="text-xs font-medium text-white">Destacar en el Hero Slider</p>
+                                        <p class="text-[10px] text-secondary">Aparecerá en el carrusel superior</p>
+                                    </div>
+                                </label>
+                                <button onclick="saveAdminItem()" class="w-full py-3 rounded-xl bg-accent text-white font-bold hover:bg-orange-600 transition-colors shadow-lg shadow-accent/20">
+                                    <i class="fa-solid fa-save mr-2"></i> Guardar en Catálogo
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="import-modal" class="fixed inset-0 z-[250] hidden admin-modal overflow-y-auto">
+            <div class="min-h-full flex items-start sm:items-center justify-center p-4">
+                <div class="bg-[#141c2f] rounded-2xl w-full max-w-2xl border border-white/10 max-h-[90vh] flex flex-col">
+                    <div class="flex items-center justify-between p-5 border-b border-white/5">
+                        <div>
+                            <h3 class="text-lg font-bold text-white"><i class="fa-solid fa-file-import text-appleBlue mr-2"></i>Importar TXT</h3>
+                            <p class="text-[10px] text-secondary mt-1">Soporta Películas y Series</p>
+                        </div>
+                        <button onclick="closeImportModal()" class="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-secondary hover:text-white transition-colors">
+                            <i class="fa-solid fa-times text-sm"></i>
+                        </button>
+                    </div>
+                    <div class="overflow-y-auto admin-scroll p-5 flex-1">
+                        <div id="import-step-1">
+                            <div class="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 mb-4">
+                                <p class="text-[10px] text-blue-200 font-medium mb-2"><i class="fa-solid fa-info-circle mr-1"></i> Formato para Películas:</p>
+                                <pre class="text-[10px] text-blue-100/70 font-mono bg-black/30 p-2 rounded leading-relaxed mb-3">Nombre: Annabelle
+Url: https://servidor.pro:8080/movie/usuario/clave/123.mp4
+Genero: Terror</pre>
+                                <p class="text-[10px] text-blue-200 font-medium mb-2"><i class="fa-solid fa-info-circle mr-1"></i> Formato para Series:</p>
+                                <pre class="text-[10px] text-blue-100/70 font-mono bg-black/30 p-2 rounded leading-relaxed">Nombre: Welcome To Derry
+Url: http://servidor.pro:8080
+Genero: Terror
+Temporadas: 1
+Episodios: 2
+Episodio 1: http://servidor.pro:8080/series/usuario/clave/456.mp4
+Episodio 2: http://servidor.pro:8080/series/usuario/clave/457.mp4</pre>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <label class="text-[10px] text-secondary uppercase font-bold mb-2 block">Opción 1: Subir archivo (Solo si estás en un servidor real)</label>
+                                <input type="file" id="import-file" accept=".txt,text/plain" class="hidden">
+                                <div onclick="document.getElementById('import-file').click()" class="border-2 border-dashed border-white/10 hover:border-appleBlue rounded-xl p-6 text-center cursor-pointer transition-colors bg-black/20">
+                                    <i class="fa-solid fa-cloud-arrow-up text-2xl text-secondary mb-2"></i>
+                                    <p class="text-sm text-white font-medium mb-1">Haz clic para seleccionar archivo .txt</p>
+                                    <p class="text-[10px] text-secondary">O arrastra y suelta aquí</p>
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="text-[10px] text-secondary uppercase font-bold mb-2 block">Opción 2: Pegar texto manualmente (Recomendado para visores)</label>
+                                <textarea id="import-textarea" rows="6" placeholder="Pega aquí el contenido de tu TXT..." 
+                                    class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-secondary outline-none focus:border-accent transition-colors text-xs font-mono"></textarea>
+                                <button onclick="processPastedText()" class="w-full mt-2 py-3 rounded-xl bg-accent text-white font-bold text-sm hover:bg-orange-600 transition-colors shadow-lg shadow-accent/20">
+                                    <i class="fa-solid fa-file-circle-plus mr-2"></i> Procesar Texto Pegado
+                                </button>
+                            </div>
+
+                            <label class="flex items-center gap-3 p-3 rounded-xl bg-black/20 border border-white/5 cursor-pointer hover:bg-black/40 transition-colors mb-3">
+                                <input id="import-skip-tmdb" type="checkbox" class="w-4 h-4 rounded accent-appleBlue" checked>
+                                <div>
+                                    <p class="text-xs font-medium text-white">Modo Rápido (Sin TMDB)</p>
+                                    <p class="text-[10px] text-secondary">No busca carátulas, solo guarda los datos base.</p>
+                                </div>
+                            </label>
+                        </div>
+                        
+                        <div id="import-step-2" class="hidden">
+                            <div class="mb-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <p class="text-xs font-medium text-white" id="import-status">Procesando...</p>
+                                    <p class="text-xs text-secondary" id="import-counter">0 / 0</p>
+                                </div>
+                                <div class="progress-bar-container">
+                                    <div id="import-progress" class="progress-bar-fill" style="width:0%"></div>
+                                </div>
+                            </div>
+                            <div id="import-log" class="bg-black/40 border border-white/5 rounded-xl p-3 h-32 overflow-y-auto admin-scroll text-[10px] font-mono text-secondary leading-relaxed mb-4"></div>
+                            <button id="import-cancel-btn" onclick="cancelImport()" class="w-full py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 font-medium text-sm hover:bg-red-500/20 transition-colors">
+                                <i class="fa-solid fa-stop"></i> Detener Importación
+                            </button>
+                        </div>
+                        
+                        <div id="import-step-3" class="hidden text-center py-4">
+                            <div class="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-4">
+                                <i class="fa-solid fa-check text-2xl text-green-400"></i>
+                            </div>
+                            <h3 class="text-lg font-bold text-white mb-2">¡Importación Completada!</h3>
+                            <div id="import-result" class="text-secondary mb-6 text-xs"></div>
+                            <button onclick="closeImportModal(); renderAdmin();" class="bg-white text-black font-bold px-6 py-2.5 rounded-xl hover:bg-gray-200 transition-colors text-sm">
+                                Ver Catálogo
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    const input = document.getElementById('admin-search-input');
+    if (input) {
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); doAdminSearch(); }
+        });
+    }
+    const fileInput = document.getElementById('import-file');
+    if (fileInput) fileInput.addEventListener('change', handleImportFile);
+}
+
+function adminItemCard(item) {
+    const isTv = item.type === 'tv';
+    return `
+        <div class="bg-[#141c2f] rounded-xl p-3 border border-white/5 flex gap-3">
+            <img src="${getPosterUrl(item, 'w342')}" class="w-16 aspect-[2/3] object-cover rounded-lg flex-shrink-0">
+            <div class="flex-1 min-w-0 flex flex-col">
+                <h4 class="font-bold text-xs text-white line-clamp-2 leading-tight">${escapeHtml(item.title)}</h4>
+                <p class="text-[10px] text-secondary mt-0.5">${item.year || ''} · ${item.genre || 'Sin género'} ${isTv ? '· '+item.episodes?.length+' Eps' : ''}</p>
+                ${item.isHero ? '<span class="text-[9px] font-bold text-accent mt-1"><i class="fa-solid fa-star"></i> En Hero</span>' : ''}
+                <div class="flex gap-2 mt-auto pt-2">
+                    <button onclick="deleteItem('${item.key}')" class="flex-1 text-[10px] py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors">
+                        <i class="fa-solid fa-trash"></i> Eliminar
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+let adminSearchState = { selected: null, editing: null };
+window.__adminSearchResults = [];
+
+function openAddModal() {
+    adminSearchState = { selected: null, editing: null };
+    document.getElementById('add-modal').classList.remove('hidden');
+    document.getElementById('admin-search-section').classList.remove('hidden');
+    document.getElementById('admin-form-section').classList.add('hidden');
+    document.getElementById('admin-search-input').value = '';
+    document.getElementById('admin-search-results').innerHTML = '';
+    setTimeout(() => document.getElementById('admin-search-input').focus(), 100);
+}
+
+function closeAddModal() {
+    document.getElementById('add-modal').classList.add('hidden');
+}
+
+function backToSearch() {
+    document.getElementById('admin-search-section').classList.remove('hidden');
+    document.getElementById('admin-form-section').classList.add('hidden');
+    adminSearchState.selected = null;
+    adminSearchState.editing = false;
+}
+
+async function doAdminSearch() {
+    const q = document.getElementById('admin-search-input').value.trim();
+    if (!q) return;
+    const results = document.getElementById('admin-search-results');
+    results.innerHTML = '<div class="flex justify-center py-4"><div class="animate-spin rounded-full h-6 w-6 border-b-2 border-accent"></div></div>';
+    const data = await tmdbSearch(q);
+    if (data.length === 0) {
+        results.innerHTML = '<p class="text-center text-secondary text-xs py-4">Sin resultados.</p>';
+        return;
+    }
+    window.__adminSearchResults = data.slice(0, 10);
+    results.innerHTML = window.__adminSearchResults.map((r, idx) => {
+        const title = r.title || r.name || 'Sin título';
+        const year = (r.release_date || r.first_air_date || '').slice(0, 4);
+        const poster = r.poster_path ? CONFIG.IMG_BASE + 'w92' + r.poster_path : makePlaceholder(title, 92, 138);
+        return `
+            <div onclick="selectAdminItemByIndex(${idx})" 
+                class="flex gap-3 p-2 rounded-lg hover:bg-white/5 cursor-pointer transition-colors">
+                <img src="${poster}" class="w-10 aspect-[2/3] object-cover rounded flex-shrink-0">
+                <div class="flex-1 min-w-0 flex flex-col justify-center">
+                    <p class="text-xs font-medium text-white line-clamp-1">${escapeHtml(title)}</p>
+                    <p class="text-[10px] text-secondary">${year || 'Sin año'} · ${r.media_type === 'tv' ? 'Serie' : 'Película'}</p>
+                </div>
+                <i class="fa-solid fa-chevron-right text-secondary text-xs self-center"></i>
+            </div>
+        `;
+    }).join('');
+}
+
+function selectAdminItemByIndex(idx) {
+    const item = window.__adminSearchResults?.[idx];
+    if (!item) return;
+    selectAdminItem(item);
+}
+
+function selectAdminItem(tmdbItem) {
+    adminSearchState.selected = tmdbItem;
+    document.getElementById('admin-search-section').classList.add('hidden');
+    document.getElementById('admin-form-section').classList.remove('hidden');
+    document.getElementById('admin-selected-info').innerHTML = renderSelectedInfo({
+        title: tmdbItem.title || tmdbItem.name,
+        year: (tmdbItem.release_date || tmdbItem.first_air_date || '').slice(0, 4),
+        poster_path: tmdbItem.poster_path,
+        type: tmdbItem.media_type,
+        overview: tmdbItem.overview
+    });
+    document.getElementById('admin-video-url').value = '';
+    document.getElementById('admin-genre').value = '';
+    document.getElementById('admin-is-hero').checked = false;
+}
+
+function renderSelectedInfo(item) {
+    return `
+        <div class="flex gap-4 p-3 rounded-xl bg-black/20 border border-white/5">
+            <img src="${getPosterUrl(item, 'w92')}" class="w-16 aspect-[2/3] object-cover rounded-lg flex-shrink-0">
+            <div class="flex-1 min-w-0">
+                <p class="font-bold text-white text-xs line-clamp-2">${escapeHtml(item.title)}</p>
+                <p class="text-[10px] text-secondary mt-1">${item.year || ''} · ${item.type === 'tv' ? 'Serie' : 'Película'}</p>
+                ${item.overview ? `<p class="text-[10px] text-secondary mt-1 line-clamp-2">${escapeHtml(item.overview)}</p>` : ''}
+            </div>
+        </div>
+    `;
+}
+
+async function saveAdminItem() {
+    const sel = adminSearchState.selected;
+    if (!sel) return;
+    const videoUrl = document.getElementById('admin-video-url').value.trim();
+    const genre = document.getElementById('admin-genre').value;
+    const isHero = document.getElementById('admin-is-hero').checked;
+
+    if (!videoUrl) { showToast('⚠️ La URL del video es obligatoria', 'error'); return; }
+    if (!genre) { showToast('⚠️ Selecciona un género', 'error'); return; }
+
+    const type = sel.media_type || sel.type;
+    const title = sel.title || sel.name;
+    const year = parseInt((sel.release_date || sel.first_air_date || '').slice(0, 4)) || null;
+
+    await addToCatalog({
+        tmdbId: String(sel.id),
+        type,
+        title,
+        year,
+        poster_path: sel.poster_path || null,
+        backdrop_path: sel.backdrop_path || null,
+        overview: sel.overview || '',
+        rating: sel.vote_average || 0,
+        genre,
+        videoUrl,
+        episodes: type === 'tv' ? [{ season: 1, episode: 1, url: videoUrl }] : null,
+        isHero
+    });
+
+    closeAddModal();
+    renderAdmin();
+    showToast('✅ Título agregado exitosamente', 'success');
+}
+
+async function deleteItem(key) {
+    if (!confirm('¿Eliminar este título del catálogo?')) return;
+    state.catalog = state.catalog.filter(x => x.key !== key);
+    await dbDelete(key);
+    showToast('🗑️ Eliminado', 'success');
+    renderAdmin();
+}
+
+async function confirmClearCatalog() {
+    if (!confirm('⚠️ ¿Estás seguro de eliminar TODO el catálogo?\n\nEsta acción NO se puede deshacer.')) return;
+    
+    try {
+        state.catalog = [];
+        await dbClear();
+        localStorage.removeItem('sp_progress');
+        showToast('🗑️ Catálogo limpiado', 'success');
+        renderAdmin();
+    } catch(e) {
+        console.error(e);
+        showToast('❌ Error al limpiar catálogo', 'error');
+    }
+}
+
+// ============================================================
+// IMPORTADOR MASIVO (ARCHIVO Y TEXTO PEGADO)
+// ============================================================
+function openImportModal() {
+    document.getElementById('import-modal').classList.remove('hidden');
+    document.getElementById('import-step-1').classList.remove('hidden');
+    document.getElementById('import-step-2').classList.add('hidden');
+    document.getElementById('import-step-3').classList.add('hidden');
+    document.getElementById('import-file').value = '';
+    document.getElementById('import-textarea').value = '';
+    state.importCancel = false;
+}
+
+function closeImportModal() {
+    document.getElementById('import-modal').classList.add('hidden');
+}
+
+function processPastedText() {
+    const text = document.getElementById('import-textarea').value;
+    if (!text.trim()) {
+        showToast('⚠️ El área de texto está vacía', 'error');
+        return;
+    }
+    procesarContenido(text);
+}
+
+async function handleImportFile(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    try {
+        const text = await file.text();
+        procesarContenido(text);
+    } catch(err) {
+        showToast('❌ Error al leer archivo. Usa la opción de pegar texto.', 'error');
+    }
+}
+
+function parseTxtContent(text) {
+    const lines = text.replace(/\r/g, '').split('\n');
+    const items = [];
+    let current = null;
+
+    function flush() {
+        if (current && current.name && current.url) {
+            items.push(current);
+        }
+        current = null;
+    }
+
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+
+        const mName = line.match(/^Nombre\s*:\s*(.+)$/i);
+        const mUrl = line.match(/^Url\s*:\s*(.+)$/i);
+        const mGenre = line.match(/^Genero\s*:\s*(.+)$/i);
+        const mSeason = line.match(/^Temporadas?\s*:\s*(.+)$/i);
+        const mEpisodeCount = line.match(/^Episodios?\s*:\s*(.+)$/i);
+        const mEpisodeUrl = line.match(/^Episodio\s+(\d+)\s*:\s*(.+)$/i);
+
+        if (mName) {
+            if (current) flush();
+            current = {
+                name: mName[1].trim(),
+                url: null,
+                genre: null,
+                season: 1,
+                episodesCount: 0,
+                episodes: []
+            };
+        } else if (mUrl && current) {
+            current.url = mUrl[1].trim();
+        } else if (mGenre && current) {
+            current.genre = mGenre[1].trim();
+        } else if (mSeason && current) {
+            current.season = parseInt(mSeason[1].trim()) || 1;
+        } else if (mEpisodeCount && current) {
+            current.episodesCount = parseInt(mEpisodeCount[1].trim()) || 0;
+        } else if (mEpisodeUrl && current) {
+            const epNum = parseInt(mEpisodeUrl[1]);
+            const epUrl = mEpisodeUrl[2].trim();
+            current.episodes.push({ episode: epNum, url: epUrl });
+        }
+    }
+    if (current) flush();
+    return items;
+}
+
+function parseTitleYear(rawName) {
+    const m = rawName.match(/^(.*?)\s*\((\d{4})\)\s*$/);
+    if (m) return { title: m[1].trim(), year: parseInt(m[2]) };
+    return { title: rawName.trim(), year: null };
+}
+
+function mapGenre(rawGenre) {
+    if (!rawGenre) return 'Otros';
+    const parts = rawGenre.split(/[,.\/;|]/).map(s => s.trim().toUpperCase()).filter(Boolean);
+    for (const p of parts) {
+        if (GENRE_MAP[p]) return GENRE_MAP[p];
+        for (const key in GENRE_MAP) {
+            if (p.includes(key) || key.includes(p)) return GENRE_MAP[key];
+        }
+    }
+    const upper = rawGenre.toUpperCase();
+    for (const key in GENRE_MAP) {
+        if (upper.includes(key)) return GENRE_MAP[key];
+    }
+    return 'Otros';
+}
+
+function appendImportLog(msg) {
+    const log = document.getElementById('import-log');
+    if (!log) return;
+    const line = document.createElement('div');
+    line.textContent = msg;
+    log.appendChild(line);
+    log.scrollTop = log.scrollHeight;
+}
+
+async function procesarContenido(text) {
+    try {
+        const rawItems = parseTxtContent(text);
+
+        if (rawItems.length === 0) {
+            showToast('⚠️ No se detectaron items válidos', 'error');
+            return;
+        }
+
+        document.getElementById('import-step-1').classList.add('hidden');
+        document.getElementById('import-step-2').classList.remove('hidden');
+        document.getElementById('import-log').innerHTML = '';
+        appendImportLog(`📄 Procesando texto...`);
+        appendImportLog(`🎯 Detectados ${rawItems.length} items (Películas/Series)`);
+        appendImportLog('—');
+
+        state.importCancel = false;
+        const skipTmdb = document.getElementById('import-skip-tmdb').checked;
+
+        const prepared = rawItems.map((r, i) => {
+            const { title, year } = parseTitleYear(r.name);
+            const isTv = r.episodes && r.episodes.length > 0;
+            
+            let episodes = [];
+            if (isTv) {
+                episodes = r.episodes.map(ep => ({
+                    season: r.season || 1,
+                    episode: ep.episode,
+                    url: ep.url
+                }));
+            }
+
+            return {
+                idx: i, rawName: r.name, title, year,
+                videoUrl: r.url,
+                rawGenre: r.genre, genre: mapGenre(r.genre),
+                type: isTv ? 'tv' : 'movie', 
+                episodes: isTv ? episodes : null,
+                tmdbId: null,
+                poster_path: null, backdrop_path: null,
+                overview: '', rating: 0, isHero: false, key: null
+            };
+        });
+
+        let tmdbDone = 0;
+        const total = prepared.length;
+
+        if (!skipTmdb) {
+            appendImportLog(`🎬 Buscando en TMDB (0 / ${total})...`);
+            const CONC = 4;
+            let cursor = 0;
+
+            async function worker() {
+                while (cursor < prepared.length && !state.importCancel) {
+                    const myIdx = cursor++;
+                    const item = prepared[myIdx];
+                    try {
+                        const searchType = item.type === 'tv' ? 'tv' : 'movie';
+                        const hit = await tmdbFindBest(item.title, item.year, searchType);
+                        
+                        if (hit) {
+                            item.tmdbId = String(hit.id);
+                            item.poster_path = hit.poster_path || null;
+                            item.backdrop_path = hit.backdrop_path || null;
+                            item.overview = hit.overview || '';
+                            item.rating = hit.vote_average || 0;
+                        } else {
+                            item.tmdbId = 'local_' + hashString(item.title + '_' + (item.year || ''));
+                        }
+                    } catch(e) {
+                        item.tmdbId = 'local_' + hashString(item.title + '_' + (item.year || ''));
+                    }
+                    tmdbDone++;
+                    if (tmdbDone % 5 === 0 || tmdbDone === total) {
+                        updateImportProgress(tmdbDone, total, `TMDB: ${tmdbDone} / ${total}`);
+                    }
+                }
+            }
+
+            await Promise.all(Array.from({ length: CONC }, worker));
+        } else {
+            prepared.forEach(item => {
+                item.tmdbId = 'local_' + hashString(item.title + '_' + (item.year || ''));
+            });
+            appendImportLog('⚡ Modo rápido activo (Sin TMDB)');
+            updateImportProgress(total, total, 'Preparando...');
+        }
+
+        appendImportLog('—');
+        appendImportLog('🔍 Comparando con catálogo...');
+        
+        const existingKeys = new Set(state.catalog.map(x => x.key));
+        let skippedCount = 0;
+        const finalItems = [];
+
+        for (const item of prepared) {
+            item.key = item.type === 'tv' 
+                ? 'tv_' + hashString(item.title + '_' + (item.year || ''))
+                : 'url_' + hashString(item.videoUrl);
+            
+            if (existingKeys.has(item.key)) {
+                skippedCount++;
+                continue;
+            }
+            finalItems.push(item);
+            existingKeys.add(item.key);
+        }
+
+        appendImportLog(`⏭️ Omitidos ${skippedCount} duplicados.`);
+
+        if (finalItems.length === 0) {
+            appendImportLog('⚠️ No hay items nuevos para importar.');
+            finishImport(0, skippedCount, 0);
+            return;
+        }
+
+        appendImportLog(`💾 Guardando ${finalItems.length} items...`);
+        
+        await dbPutBulk(finalItems, (done, total) => {
+            updateImportProgress(done, total, `Guardando: ${done} / ${total}`);
+            const chunk = finalItems.slice(done - 100, done);
+            state.catalog.push(...chunk);
+        });
+
+        finishImport(finalItems.length, skippedCount, finalItems.length);
+
+    } catch(err) {
+        console.error(err);
+        showToast('❌ Error al importar: ' + err.message, 'error');
+        appendImportLog('❌ Error: ' + err.message);
+    }
+}
+
+function updateImportProgress(done, total, label) {
+    const pct = total > 0 ? (done / total) * 100 : 0;
+    const bar = document.getElementById('import-progress');
+    if (bar) bar.style.width = pct + '%';
+    const counter = document.getElementById('import-counter');
+    if (counter) counter.textContent = `${done} / ${total}`;
+    const status = document.getElementById('import-status');
+    if (status) status.textContent = label;
+}
+
+function cancelImport() {
+    state.importCancel = true;
+    document.getElementById('import-cancel-btn').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Deteniendo...';
+    document.getElementById('import-cancel-btn').disabled = true;
+}
+
+function finishImport(imported, skipped, total) {
+    document.getElementById('import-step-2').classList.add('hidden');
+    document.getElementById('import-step-3').classList.remove('hidden');
+    
+    const resultDiv = document.getElementById('import-result');
+    resultDiv.innerHTML = `
+        <div class="text-left bg-black/30 rounded-xl p-4 space-y-1">
+            <p><span class="text-green-400 font-bold">✓ ${imported}</span> importados/actualizados</p>
+            <p><span class="text-amber-400 font-bold">⏭️ ${skipped}</span> omitidos (ya existían)</p>
+            <p class="pt-2 border-t border-white/10 mt-2"><span class="font-bold">${state.catalog.length}</span> total en catálogo</p>
+        </div>
+    `;
+    showToast(`Proceso de importación finalizado`, 'success');
+}
+
+// ============================================================
+// ROUTER
+// ============================================================
+function router() {
+    try {
+        let hash = window.location.hash.substring(1) || 'home';
+        const parts = hash.split('/');
+        const cleanParts = parts.map(p => p.split('?')[0]);
+        window.scrollTo({ top: 0, behavior: 'instant' });
+
+        let params = {};
+        if (hash.includes('?')) {
+            const queryString = hash.split('?')[1];
+            const urlParams = new URLSearchParams(queryString);
+            for (const [key, value] of urlParams.entries()) {
+                params[key] = value;
+            }
+        }
+
+        if (state.heroTimer) { clearInterval(state.heroTimer); state.heroTimer = null; }
+
+        if (cleanParts[0] === 'home') { 
+            state.lastRoute = 'home'; updateBottomNav('home'); renderHome(); 
+        }
+        else if (cleanParts[0] === 'explore') { 
+            state.lastRoute = 'explore'; 
+            updateBottomNav('explore'); 
+            if (params.genre) state.searchFilter.genre = params.genre;
+            else state.searchFilter.genre = null;
+            renderExplore(); 
+        }
+        else if (cleanParts[0] === 'movies') { 
+            state.lastRoute = 'movies'; updateBottomNav('movies'); renderMoviesPage(); 
+        }
+        else if (cleanParts[0] === 'series') { 
+            state.lastRoute = 'series'; updateBottomNav('movies'); renderSeriesPage(); 
+        }
+        else if (cleanParts[0] === 'popular') { 
+            state.lastRoute = 'popular'; updateBottomNav('explore'); renderPopularPage(); 
+        }
+        else if (cleanParts[0] === 'mylist') { 
+            state.lastRoute = 'mylist'; updateBottomNav('mylist'); renderMyList(); 
+        }
+        else if (cleanParts[0] === 'detail' && cleanParts[1] && cleanParts[2]) { 
+            updateBottomNav(''); renderDetail(cleanParts[1], cleanParts[2]); 
+        }
+        else if (cleanParts[0] === 'watch' && cleanParts[1] && cleanParts[2]) { 
+            updateBottomNav(''); renderWatch(cleanParts[1], cleanParts[2]); 
+        }
+        else if (cleanParts[0] === 'admin') { 
+            updateBottomNav(''); renderAdmin(); 
+        }
+        else window.location.hash = 'home';
+    } catch(e) {
+        console.error('Router error:', e);
+        appContainer.innerHTML = `
+            <div class="p-8 text-center mt-20">
+                <i class="fa-solid fa-triangle-exclamation text-4xl text-amber-500 mb-3"></i>
+                <p class="text-white font-bold mb-2">Algo salió mal</p>
+                <p class="text-secondary text-sm mb-4">${escapeHtml(e.message || 'Error inesperado')}</p>
+                <button onclick="window.location.hash='home'; location.reload();" class="bg-white text-black font-bold px-6 py-3 rounded-xl">
+                    Reintentar
+                </button>
+            </div>
+        `;
+    }
+}
+
+window.addEventListener('hashchange', router);
+
+window.addEventListener('scroll', () => {
+    const header = document.getElementById('main-header');
+    if (window.scrollY > 30) header.classList.add('shadow-2xl');
+    else header.classList.remove('shadow-2xl');
+});
+
+// ============================================================
+// ARRANQUE
+// ============================================================
+window.addEventListener('DOMContentLoaded', async () => {
+    appContainer.innerHTML = `
+        <div class="flex flex-col items-center justify-center min-h-[70vh]">
+            <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-accent mb-4"></div>
+            <p class="text-secondary text-sm">Cargando Simpsoteca...</p>
+        </div>
+    `;
+
+    try {
+        await openDB();
+        state.catalog = await dbGetAll();
+        console.log(`✅ Catálogo cargado: ${state.catalog.length} items (DB Activa)`);
+    } catch(e) {
+        console.warn('⚠️ IndexedDB no disponible. Funcionando en modo memoria.', e);
+        state.dbAvailable = false;
+        state.catalog = [];
+        showToast('⚠️ Modo lectura: Base de datos no disponible', 'info');
+    }
+
+    router();
+});
+</script>
+
+</body>
+</html>
