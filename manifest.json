@@ -1,0 +1,37 @@
+{
+  "name": "Simpsoteca",
+  "short_name": "Simpsoteca",
+  "description": "Tu catálogo de películas y series personal",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#05080f",
+  "theme_color": "#05080f",
+  "lang": "es",
+  "icons": [
+    {
+      "src": "assets/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Películas",
+      "url": "./peliculas.html",
+      "description": "Ver todas las películas"
+    },
+    {
+      "name": "Series",
+      "url": "./series.html",
+      "description": "Ver todas las series"
+    },
+    {
+      "name": "Admin",
+      "url": "./admin.html",
+      "description": "Panel de administración"
+    }
+  ]
+}
