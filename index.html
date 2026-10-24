@@ -493,7 +493,12 @@
       if(!url){setVideoStatus('El enlace de vídeo no es válido.');toast('URL de vídeo no válida.');return;}
       dom.video.pause();dom.video.removeAttribute('src');dom.video.load();
       setVideoStatus('Conectando con el vídeo…');
-      dom.video.src=url;dom.video.load();
+      
+      // --- MODIFICACIÓN PARA EL PROXY DE CLOUDFLARE ---
+      // Usamos encodeURIComponent para que la URL original viaje segura
+      dom.video.src = `https://weathered-breeze-f067.cesar-herrera9718.workers.dev/?url=${encodeURIComponent(url)}`;
+      
+      dom.video.load();
       // Algunos servidores tardan en responder: usar eventos de media, no un temporizador fijo.
     }
     dom.video.addEventListener('loadstart',()=>setVideoStatus('Conectando con el vídeo…'));
