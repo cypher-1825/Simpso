@@ -1,560 +1,228 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="theme-color" content="#0b0f1a">
-    <title>StreamPlay IPTV</title>
-    
-    <!-- Iconos, Alertas y Reproductor HLS -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-
-    <style>
-        /* ============================================================
-           DISEÑO MODERNO ESTILO DISNEY+ / NETFLIX
-           ============================================================ */
-        :root {
-            --bg-main: #0a0b10;
-            --bg-card: #131826;
-            --bg-hover: #1e2638;
-            --text-main: #ffffff;
-            --text-muted: #8b96ad;
-            --primary: #0072ff;
-            --primary-hover: #005ce6;
-            --danger: #ff4757;
-            --border: rgba(255, 255, 255, 0.08);
-            --radius: 12px;
-            --font: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        }
-
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { margin: 0; background-color: var(--bg-main); color: var(--text-main); font-family: var(--font); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
-        
-        /* Scrollbar personalizado */
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: var(--bg-main); }
-        ::-webkit-scrollbar-thumb { background: var(--bg-hover); border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
-
-        /* Loader */
-        .loader-container { position: fixed; inset: 0; z-index: 9999; background: var(--bg-main); display: flex; flex-direction: column; justify-content: center; align-items: center; transition: opacity 0.4s; }
-        .loader-container.hidden { opacity: 0; pointer-events: none; }
-        .spinner { width: 60px; height: 60px; border: 4px solid rgba(255,255,255,0.05); border-top: 4px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px; }
-        .loader-text { color: var(--text-muted); font-size: 15px; font-weight: 500; letter-spacing: 1px; }
-        @keyframes spin { 100% { transform: rotate(360deg); } }
-
-        /* Header */
-        header { position: sticky; top: 0; z-index: 100; background: linear-gradient(to bottom, rgba(10,11,16,0.95) 0%, rgba(10,11,16,0) 100%); transition: background 0.3s; padding-top: env(safe-area-inset-top); }
-        header.scrolled { background: rgba(10,11,16,0.98); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); }
-        .header-content { max-width: 1400px; margin: 0 auto; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; }
-        .logo { display: flex; align-items: center; gap: 10px; font-size: 22px; font-weight: 900; letter-spacing: -0.5px; cursor: pointer; }
-        .logo i { color: var(--primary); }
-        .nav-actions { display: flex; gap: 12px; }
-        .btn-icon { width: 42px; height: 42px; border-radius: 50%; background: rgba(255,255,255,0.1); border: none; color: white; cursor: pointer; display: grid; place-items: center; font-size: 16px; transition: all 0.2s; }
-        .btn-icon:hover { background: rgba(255,255,255,0.2); transform: scale(1.05); }
-
-        /* Contenido Principal */
-        main { max-width: 1400px; margin: 0 auto; padding: 20px 24px 80px; min-height: 100vh; }
-        
-        /* Hero Banner (Destacado) */
-        .hero-banner { position: relative; border-radius: var(--radius); overflow: hidden; margin-bottom: 40px; aspect-ratio: 16/9; max-height: 500px; display: flex; align-items: flex-end; padding: 40px; background: linear-gradient(135deg, #1e2638, #0a0b10); }
-        .hero-banner img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.6; }
-        .hero-content { position: relative; z-index: 2; max-width: 600px; }
-        .hero-title { font-size: 42px; font-weight: 900; margin: 0 0 12px; line-height: 1.1; text-shadow: 0 4px 20px rgba(0,0,0,0.8); }
-        .hero-desc { color: #ddd; font-size: 15px; margin-bottom: 24px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-        .btn-primary { background: var(--primary); color: white; border: none; padding: 14px 28px; border-radius: 8px; font-size: 16px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: background 0.2s; }
-        .btn-primary:hover { background: var(--primary-hover); }
-
-        /* Filas de Tarjetas */
-        .section-title { font-size: 20px; font-weight: 800; margin: 0 0 16px 0; display: flex; justify-content: space-between; align-items: center; }
-        .card-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px; margin-bottom: 40px; }
-        
-        /* Tarjeta individual */
-        .card { background: var(--bg-card); border-radius: var(--radius); overflow: hidden; cursor: pointer; position: relative; transition: transform 0.3s ease, box-shadow 0.3s ease; }
-        .card:hover { transform: translateY(-8px) scale(1.02); box-shadow: 0 15px 30px rgba(0,0,0,0.6); z-index: 10; }
-        .card-img { width: 100%; aspect-ratio: 2/3; object-fit: cover; background: #000; display: block; }
-        .card-info { position: absolute; bottom: 0; left: 0; right: 0; padding: 20px 12px 12px; background: linear-gradient(to top, rgba(0,0,0,0.95), transparent); }
-        .card-title { font-size: 14px; font-weight: 700; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .card-badge { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); color: #ffc107; font-size: 12px; font-weight: 800; padding: 4px 8px; border-radius: 6px; display: flex; align-items: center; gap: 4px; }
-
-        /* Modales y Reproductor */
-        .modal { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); display: none; justify-content: center; align-items: center; padding: 20px; }
-        .modal.active { display: flex; animation: fadeIn 0.3s ease; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        .modal-box { background: var(--bg-card); border-radius: 16px; width: 100%; max-width: 420px; padding: 32px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); border: 1px solid var(--border); }
-        .input-field { margin-bottom: 20px; }
-        .input-field label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 8px; font-weight: 600; text-transform: uppercase; }
-        .input-field input { width: 100%; background: var(--bg-main); border: 1px solid var(--border); color: white; padding: 14px 16px; border-radius: 8px; font-size: 15px; outline: none; transition: border 0.2s; }
-        .input-field input:focus { border-color: var(--primary); }
-
-        /* Reproductor Video */
-        .player-modal { position: fixed; inset: 0; z-index: 2000; background: #000; display: none; flex-direction: column; }
-        .player-modal.active { display: flex; }
-        .player-header { padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.8); }
-        .player-header h3 { margin: 0; font-size: 18px; }
-        .video-wrapper { flex: 1; display: flex; justify-content: center; align-items: center; background: #000; }
-        .video-wrapper video { width: 100%; height: 100%; max-height: 100%; object-fit: contain; }
-        .episodes-bar { background: var(--bg-card); padding: 16px; max-height: 25vh; overflow-y: auto; border-top: 1px solid var(--border); }
-        .ep-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
-        .ep-btn { background: var(--bg-hover); border: none; color: white; padding: 12px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.2s; text-align: left; }
-        .ep-btn:hover, .ep-btn.active { background: var(--primary); }
-
-        /* Buscador */
-        .search-input { width: 100%; background: var(--bg-card); border: 1px solid var(--border); padding: 14px 16px 14px 44px; border-radius: 12px; color: white; font-size: 15px; outline: none; margin-bottom: 24px; }
-        .search-input:focus { border-color: var(--primary); }
-        .search-wrapper { position: relative; max-width: 400px; margin: 0 auto 30px; }
-        .search-wrapper i { position: absolute; left: 16px; top: 16px; color: var(--text-muted); }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .hero-title { font-size: 28px; }
-            .hero-banner { padding: 24px; aspect-ratio: 4/5; }
-            .card-row { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
-            main { padding: 16px 16px 80px; }
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#05080f">
+<title>Simpsoteca</title>
+<link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
 
-    <!-- LOADER -->
-    <div class="loader-container" id="loader">
-        <div class="spinner"></div>
-        <div class="loader-text" id="loader-text">Iniciando StreamPlay...</div>
+<div id="toast-container"></div>
+
+<header class="header">
+  <div class="header-inner">
+    <a href="index.html" class="logo"><span class="logo-accent">Simps</span>oteca</a>
+    <nav class="nav-desktop">
+      <a href="index.html" class="active">Inicio</a>
+      <a href="peliculas.html">Películas</a>
+      <a href="series.html">Series</a>
+      <a href="explorar.html">Explorar</a>
+    </nav>
+    <div class="header-actions">
+      <a href="buscar.html" class="icon-btn" title="Buscar">🔍</a>
+      <a href="admin.html" class="avatar-btn" title="Admin">AD</a>
     </div>
+  </div>
+</header>
 
-    <!-- HEADER -->
-    <header id="header">
-        <div class="header-content">
-            <div class="logo" onclick="app.goHome()">
-                <i class="fa-solid fa-play"></i> STREAMPLAY
-            </div>
-            <div class="nav-actions">
-                <button class="btn-icon" onclick="app.openLogin()"><i class="fa-solid fa-user"></i></button>
-            </div>
+<main class="container">
+  <div id="home-content">
+    <div class="spinner"></div>
+  </div>
+</main>
+
+<nav class="bottom-nav">
+  <a href="index.html" class="active">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+    <span>Inicio</span>
+  </a>
+  <a href="explorar.html">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+    <span>Explorar</span>
+  </a>
+  <a href="peliculas.html">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M10 9l5 3-5 3z" fill="currentColor"/></svg>
+    <span>Películas</span>
+  </a>
+  <a href="mi-lista.html">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
+    <span>Mi Lista</span>
+  </a>
+</nav>
+
+<script type="module">
+import { DB } from './assets/js/database.js';
+import { TMDB } from './assets/js/tmdb.js';
+
+// ---- Toast global ----
+function toast(msg, type = 'info') {
+  const c = document.getElementById('toast-container');
+  const el = document.createElement('div');
+  el.className = 'toast ' + type;
+  el.textContent = msg;
+  c.appendChild(el);
+  setTimeout(() => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(-20px)';
+    setTimeout(() => el.remove(), 300);
+  }, 3500);
+}
+window.toast = toast;
+
+// ---- Helpers ----
+const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function placeholder(title, w = 342, h = 513) {
+  let hash = 0;
+  for (let i = 0; i < (title || '').length; i++) hash = ((hash << 5) - hash) + title.charCodeAt(i) | 0;
+  const hue = Math.abs(hash) % 360;
+  const initials = (title || '?').split(' ').slice(0,2).map(x => x[0] || '').join('').toUpperCase();
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="hsl(${hue},25%,22%)"/><stop offset="100%" stop-color="hsl(${hue},25%,10%)"/></linearGradient></defs><rect width="${w}" height="${h}" fill="url(#g)"/><text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" font-family="sans-serif" font-size="${Math.floor(w/4)}" font-weight="900" fill="rgba(255,255,255,.15)">${initials}</text></svg>`;
+  return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+}
+
+function posterUrl(item) {
+  if (item?.poster_path) return TMDB.poster(item, 'w342');
+  return placeholder(item?.title || '');
+}
+function backdropUrl(item) {
+  if (item?.backdrop_path) return TMDB.backdrop(item, 'w1280');
+  if (item?.poster_path) return TMDB.backdrop(item, 'w780');
+  return placeholder(item?.title || '', 1280, 720);
+}
+
+function cardHtml(item) {
+  const poster = posterUrl(item);
+  const rating = item.rating ? `<div class="card-rating">★ ${Number(item.rating).toFixed(1)}</div>` : '';
+  const type = item.type === 'tv' ? `<div class="card-type">Serie</div>` : '';
+  return `
+    <a class="card" href="detalle.html?type=${item.type}&key=${encodeURIComponent(item.key)}">
+      <div class="card-poster">
+        <img src="${poster}" alt="${escapeHtml(item.title)}" loading="lazy" onerror="this.src='${placeholder(item.title)}'">
+        ${rating}${type}
+      </div>
+      <h3 class="card-title">${escapeHtml(item.title)}</h3>
+      <p class="card-sub">${item.genre || ''}</p>
+    </a>
+  `;
+}
+
+function rowHtml(title, items, verTodosHref = null) {
+  if (!items.length) return '';
+  const link = verTodosHref
+    ? `<a class="row-link" href="${verTodosHref}">Ver todo →</a>`
+    : '';
+  return `
+    <section class="row">
+      <div class="row-header">
+        <h2 class="row-title">${escapeHtml(title)}</h2>
+        ${link}
+      </div>
+      <div class="row-scroll">
+        ${items.map(cardHtml).join('')}
+      </div>
+    </section>
+  `;
+}
+
+// ---- Render Home ----
+async function renderHome() {
+  const el = document.getElementById('home-content');
+  try {
+    await DB.init();
+    await TMDB.init();
+
+    const items = await DB.getAll();
+
+    if (!items.length) {
+      el.innerHTML = `
+        <div class="empty">
+          <div class="empty-icon">🎬</div>
+          <h1 class="empty-title">Tu catálogo está vacío</h1>
+          <p class="empty-text">Ve al panel de administración para configurar tu API key de TMDB e importar tus archivos TXT. Los datos se guardan localmente en este dispositivo.</p>
+          <a href="admin.html" class="btn btn-accent">Ir al panel admin</a>
         </div>
-    </header>
+      `;
+      return;
+    }
 
-    <!-- MAIN CONTENT -->
-    <main id="main-content">
-        <!-- La interfaz se genera por JS -->
-    </main>
+    const movies = items.filter(i => i.type === 'movie');
+    const series = items.filter(i => i.type === 'tv');
+    const recientes = [...items].sort((a,b) => (b.addedAt||0) - (a.addedAt||0)).slice(0, 12);
+    const conRating = items.filter(i => i.rating > 0).sort((a,b) => b.rating - a.rating).slice(0, 12);
 
-    <!-- MODAL LOGIN -->
-    <div class="modal" id="login-modal">
-        <div class="modal-box">
-            <div style="text-align: center; margin-bottom: 24px;">
-                <div style="width: 64px; height: 64px; background: var(--primary); border-radius: 16px; display: grid; place-items: center; margin: 0 auto 16px; font-size: 24px;">
-                    <i class="fa-solid fa-lock"></i>
-                </div>
-                <h2 style="margin: 0 0 8px; font-size: 24px;">Conectar Cuenta</h2>
-                <p style="margin: 0; color: var(--text-muted); font-size: 14px;">Ingresa tus credenciales Xtream Codes</p>
+    // Hero: primer item con backdrop
+    const hero = items.find(i => i.backdrop_path) || items[0];
+    const heroHtml = hero ? `
+      <section class="hero">
+        <div class="hero-slide active">
+          <img src="${backdropUrl(hero)}" alt="${escapeHtml(hero.title)}">
+          <div class="hero-overlay"></div>
+          <div class="hero-content">
+            <div class="hero-badge">Destacada</div>
+            <h1 class="hero-title">${escapeHtml(hero.title)}</h1>
+            <div class="hero-meta">
+              ${hero.rating ? `<span>★ ${Number(hero.rating).toFixed(1)}</span>` : ''}
+              ${hero.genre ? `<span>${escapeHtml(hero.genre)}</span>` : ''}
+              <span>${hero.type === 'tv' ? 'Serie' : 'Película'}</span>
             </div>
-            <div class="input-field">
-                <label>Servidor URL</label>
-                <input type="text" id="inp-server" value="http://liontv.es">
+            <div class="hero-actions">
+              <a href="reproductor.html?type=${hero.type}&key=${encodeURIComponent(hero.key)}" class="btn btn-primary">▶ Reproducir</a>
+              <a href="detalle.html?type=${hero.type}&key=${encodeURIComponent(hero.key)}" class="btn btn-secondary">Más info</a>
             </div>
-            <div class="input-field">
-                <label>Usuario</label>
-                <input type="text" id="inp-user" value="Gerardotv1">
-            </div>
-            <div class="input-field">
-                <label>Contraseña</label>
-                <input type="password" id="inp-pass" value="Alvaradotv1">
-            </div>
-            <button class="btn-primary" style="width: 100%; justify-content: center;" onclick="app.login()">Conectar Ahora</button>
+          </div>
         </div>
-    </div>
+      </section>
+    ` : '';
 
-    <!-- MODAL REPRODUCTOR -->
-    <div class="player-modal" id="player-modal">
-        <div class="player-header">
-            <h3 id="player-title">Cargando video...</h3>
-            <button class="btn-icon" onclick="app.closePlayer()"><i class="fa-solid fa-times"></i></button>
-        </div>
-        <div class="video-wrapper">
-            <video id="video-player" controls autoplay playsinline></video>
-        </div>
-        <div class="episodes-bar" id="episodes-container" style="display: none;">
-            <h4 style="margin: 0 0 12px; font-size: 14px; color: var(--text-muted);">Episodios Disponibles</h4>
-            <div class="ep-grid" id="ep-grid"></div>
-        </div>
-    </div>
+    // Continuar viendo
+    const progressList = await DB.getAllProgress();
+    const continuar = [];
+    for (const p of progressList) {
+      if (p.seconds > 5 && p.duration > 0 && p.seconds < p.duration - 10) {
+        const item = items.find(i => i.key === p.key);
+        if (item) continuar.push(item);
+      }
+    }
 
-    <script>
-        // ============================================================
-        // LÓGICA DE LA APLICACIÓN (Manejo de CORS y UI)
-        // ============================================================
-        
-        // Tu configuración original
-        const DEFAULT_CONFIG = {
-            server: 'http://liontv.es',
-            username: 'Gerardotv1',
-            password: 'Alvaradotv1'
-        };
+    // Agrupación por géneros
+    const generos = {};
+    items.forEach(i => {
+      const g = i.genre || 'Otros';
+      if (!generos[g]) generos[g] = [];
+      generos[g].push(i);
+    });
+    const generosValidos = Object.keys(generos)
+      .filter(g => generos[g].length >= 3)
+      .sort((a,b) => generos[b].length - generos[a].length)
+      .slice(0, 5);
 
-        // PROXY CORS CONFIABLE (Evita el bloqueo del navegador en GitHub Pages)
-        const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
+    el.innerHTML = `
+      ${heroHtml}
+      ${continuar.length ? rowHtml('Continuar viendo', continuar) : ''}
+      ${recientes.length ? rowHtml('Recién añadidas', recientes) : ''}
+      ${conRating.length ? rowHtml('Mejor valoradas', conRating, 'peliculas.html') : ''}
+      ${movies.length ? rowHtml('Películas', movies.slice(0, 12), 'peliculas.html') : ''}
+      ${series.length ? rowHtml('Series', series.slice(0, 12), 'series.html') : ''}
+      ${generosValidos.map(g => rowHtml(g, generos[g].slice(0, 12), `explorar.html?genre=${encodeURIComponent(g)}`)).join('')}
+    `;
+  } catch (err) {
+    console.error(err);
+    el.innerHTML = `
+      <div class="empty">
+        <div class="empty-icon">⚠️</div>
+        <h1 class="empty-title">Error al cargar</h1>
+        <p class="empty-text">${escapeHtml(err.message)}</p>
+        <button class="btn btn-accent" onclick="location.reload()">Reintentar</button>
+      </div>
+    `;
+  }
+}
 
-        const app = {
-            config: JSON.parse(localStorage.getItem('iptv_config')) || DEFAULT_CONFIG,
-            data: { movies: [], series: [], live: [] },
-            currentPlaylist: [],
-            hls: null,
-            featuredItem: null,
+renderHome();
+</script>
 
-            // --- UTILIDADES ---
-            ui: {
-                loader: document.getElementById('loader'),
-                loaderText: document.getElementById('loader-text'),
-                main: document.getElementById('main-content'),
-                loginModal: document.getElementById('login-modal'),
-                playerModal: document.getElementById('player-modal'),
-                video: document.getElementById('video-player'),
-                playerTitle: document.getElementById('player-title'),
-                epContainer: document.getElementById('episodes-container'),
-                epGrid: document.getElementById('ep-grid')
-            },
-
-            showLoader(show, text = 'Cargando...') {
-                if (show) {
-                    this.ui.loaderText.textContent = text;
-                    this.ui.loader.classList.remove('hidden');
-                } else {
-                    this.ui.loader.classList.add('hidden');
-                }
-            },
-
-            toast(msg, icon = 'success') {
-                Swal.fire({ toast: true, position: 'top-end', icon, title: msg, showConfirmButton: false, timer: 3000, background: '#131826', color: '#fff' });
-            },
-
-            // --- CONEXIÓN API (CON PROXY CORS) ---
-            async fetchAPI(action = '', extraParams = {}) {
-                let targetUrl = `${this.config.server}/player_api.php?username=${this.config.username}&password=${this.config.password}`;
-                if (action) targetUrl += `&action=${action}`;
-                for (const key in extraParams) targetUrl += `&${key}=${extraParams[key]}`;
-
-                // Usamos el proxy para saltar el bloqueo de GitHub Pages
-                const proxyUrl = CORS_PROXY + encodeURIComponent(targetUrl);
-
-                try {
-                    const res = await fetch(proxyUrl);
-                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                    return await res.json();
-                } catch (error) {
-                    console.error('Fetch Error:', error);
-                    throw new Error('Fallo de conexión. Verifica tus credenciales o si el servidor está online.');
-                }
-            },
-
-            // --- AUTENTICACIÓN ---
-            async login() {
-                const server = document.getElementById('inp-server').value.trim();
-                const user = document.getElementById('inp-user').value.trim();
-                const pass = document.getElementById('inp-pass').value.trim();
-
-                if (!server || !user || !pass) return this.toast('Completa todos los campos', 'error');
-
-                this.config = { server, username: user, password: pass };
-                localStorage.setItem('iptv_config', JSON.stringify(this.config));
-                this.ui.loginModal.classList.remove('active');
-                
-                this.showLoader(true, 'Verificando credenciales...');
-                try {
-                    const data = await this.fetchAPI();
-                    if (data.user_info && data.user_info.auth === 0) {
-                        throw new Error('Usuario o contraseña incorrectos.');
-                    }
-                    this.toast('¡Conectado exitosamente!');
-                    this.goHome();
-                } catch (error) {
-                    this.showLoader(false);
-                    this.toast(error.message, 'error');
-                    this.openLogin();
-                }
-            },
-
-            openLogin() {
-                document.getElementById('inp-server').value = this.config.server;
-                document.getElementById('inp-user').value = this.config.username;
-                document.getElementById('inp-pass').value = this.config.password;
-                this.ui.loginModal.classList.add('active');
-            },
-
-            // --- NAVEGACIÓN Y RENDERIZADO ---
-            async goHome() {
-                this.showLoader(true, 'Cargando catálogo...');
-                try {
-                    // Cargamos todo en paralelo para la pantalla de inicio
-                    const [moviesRaw, seriesRaw] = await Promise.all([
-                        this.fetchAPI('get_vod_streams'),
-                        this.fetchAPI('get_series')
-                    ]);
-
-                    this.data.movies = moviesRaw || [];
-                    this.data.series = seriesRaw.series || seriesRaw || [];
-                    
-                    // Seleccionamos un item aleatorio para el Hero Banner
-                    const allItems = [...this.data.movies, ...this.data.series];
-                    if (allItems.length > 0) {
-                        this.featuredItem = allItems[Math.floor(Math.random() * allItems.length)];
-                    }
-
-                    this.renderHome();
-                } catch (error) {
-                    this.renderError(error.message);
-                } finally {
-                    this.showLoader(false);
-                }
-            },
-
-            renderHome() {
-                const m = this.data.movies.slice(0, 10);
-                const s = this.data.series.slice(0, 10);
-                const hero = this.featuredItem;
-
-                let html = '';
-
-                // 1. Hero Banner
-                if (hero) {
-                    const heroImg = hero.stream_icon || hero.cover || 'https://via.placeholder.com/1920x1080/131826/0072ff?text=StreamPlay';
-                    html += `
-                        <div class="hero-banner">
-                            <img src="${heroImg}" alt="Hero">
-                            <div class="hero-content">
-                                <h1 class="hero-title">${hero.name}</h1>
-                                <p class="hero-desc">${hero.plot || 'Disfruta de este y miles de títulos más en calidad HD. Sin interrupciones, sin límites.'}</p>
-                                <button class="btn-primary" onclick="app.handleCardClick('${hero.series_id ? 'series' : 'movie'}', '${hero.series_id || hero.stream_id}', '${hero.name.replace(/'/g, "\\'")}')">
-                                    <i class="fa-solid fa-play"></i> Reproducir Ahora
-                                </button>
-                            </div>
-                        </div>
-                    `;
-                }
-
-                // 2. Fila Películas
-                if (m.length > 0) {
-                    html += `<h2 class="section-title">🎬 Películas Destacadas</h2><div class="card-row">`;
-                    m.forEach(item => html += this.buildCard(item, 'movie'));
-                    html += `</div>`;
-                }
-
-                // 3. Fila Series
-                if (s.length > 0) {
-                    html += `<h2 class="section-title">📺 Series Populares</h2><div class="card-row">`;
-                    s.forEach(item => html += this.buildCard(item, 'series'));
-                    html += `</div>`;
-                }
-
-                // Botones de Categorías al final
-                html += `
-                    <div style="display: flex; gap: 16px; margin-top: 40px; justify-content: center; flex-wrap: wrap;">
-                        <button class="btn-primary" onclick="app.loadCategory('movies', 'Películas')"><i class="fa-solid fa-film"></i> Ver Todo Películas</button>
-                        <button class="btn-primary" onclick="app.loadCategory('series', 'Series')"><i class="fa-solid fa-tv"></i> Ver Todo Series</button>
-                        <button class="btn-primary" onclick="app.loadCategory('live', 'TV en Vivo')"><i class="fa-solid fa-tower-broadcast"></i> TV en Vivo</button>
-                    </div>
-                `;
-
-                this.ui.main.innerHTML = html;
-            },
-
-            buildCard(item, type) {
-                const name = item.name || 'Sin Título';
-                const id = item.stream_id || item.series_id;
-                const img = item.stream_icon || item.cover || 'https://via.placeholder.com/300x450/131826/8b96ad?text=No+Image';
-                const rating = parseFloat(item.rating || 0);
-
-                return `
-                    <div class="card" onclick="app.handleCardClick('${type}', '${id}', '${name.replace(/'/g, "\\'")}')">
-                        <img src="${img}" class="card-img" loading="lazy" onerror="this.src='https://via.placeholder.com/300x450/131826/8b96ad?text=Error'">
-                        ${rating > 0 ? `<div class="card-badge"><i class="fa-solid fa-star"></i> ${rating.toFixed(1)}</div>` : ''}
-                        <div class="card-info">
-                            <h3 class="card-title">${name}</h3>
-                        </div>
-                    </div>
-                `;
-            },
-
-            // --- CATEGORÍAS COMPLETAS (Con Buscador) ---
-            async loadCategory(type, title) {
-                this.showLoader(true, `Cargando ${title}...`);
-                try {
-                    let items = this.data[type];
-                    if (items.length === 0) {
-                        const action = type === 'movies' ? 'get_vod_streams' : (type === 'series' ? 'get_series' : 'get_live_streams');
-                        const raw = await this.fetchAPI(action);
-                        items = type === 'series' ? (raw.series || raw) : raw;
-                        this.data[type] = items;
-                    }
-
-                    let html = `
-                        <button class="btn-icon" style="margin-bottom: 20px;" onclick="app.goHome()"><i class="fa-solid fa-arrow-left"></i></button>
-                        <h1 style="margin: 0 0 24px; font-size: 32px;">${title} <span style="font-size: 16px; color: var(--text-muted); font-weight: 400;">(${items.length})</span></h1>
-                        <div class="search-wrapper">
-                            <i class="fa-solid fa-search"></i>
-                            <input type="text" class="search-input" placeholder="Buscar en ${title}..." onkeyup="app.filterGrid(this.value)">
-                        </div>
-                        <div class="card-row" id="grid-container">
-                    `;
-
-                    items.forEach(item => html += this.buildCard(item, type));
-                    html += `</div>`;
-                    this.ui.main.innerHTML = html;
-                } catch (error) {
-                    this.renderError(error.message);
-                } finally {
-                    this.showLoader(false);
-                }
-            },
-
-            filterGrid(query) {
-                const cards = document.querySelectorAll('#grid-container .card');
-                const q = query.toLowerCase();
-                cards.forEach(c => {
-                    c.style.display = c.innerText.toLowerCase().includes(q) ? 'block' : 'none';
-                });
-            },
-
-            // --- REPRODUCTOR Y DETALLES ---
-            async handleCardClick(type, id, name) {
-                if (type === 'series') {
-                    this.loadSeriesDetails(id, name);
-                } else {
-                    // Reproducir Película o Live directamente
-                    const ext = type === 'live' ? 'm3u8' : 'mp4';
-                    const path = type === 'live' ? 'live' : 'movie';
-                    const url = `${this.config.server}/${path}/${this.config.username}/${this.config.password}/${id}.${ext}`;
-                    this.openPlayer(url, name, type);
-                }
-            },
-
-            async loadSeriesDetails(seriesId, seriesName) {
-                this.showLoader(true, 'Cargando serie...');
-                try {
-                    const data = await this.fetchAPI('get_series_info', { series_id: seriesId });
-                    const seasons = data.seasons || [];
-                    
-                    let html = `
-                        <button class="btn-icon" style="margin-bottom: 20px;" onclick="app.goHome()"><i class="fa-solid fa-arrow-left"></i></button>
-                        <h1 style="margin: 0 0 24px; font-size: 32px;">${seriesName}</h1>
-                        <div class="card-row">
-                    `;
-
-                    seasons.forEach(s => {
-                        html += `
-                            <div class="card" style="background: var(--bg-card); display:flex; flex-direction:column; justify-content:center; align-items:center; aspect-ratio: 16/9; text-align:center; padding: 20px;" 
-                                 onclick="app.loadEpisodes('${seriesId}', '${s.season_number}', '${seriesName.replace(/'/g, "\\'")}')">
-                                <i class="fa-solid fa-layer-group" style="font-size: 40px; color: var(--primary); margin-bottom: 12px;"></i>
-                                <h3 style="margin: 0; font-size: 18px;">${s.name || 'Temporada ' + s.season_number}</h3>
-                            </div>
-                        `;
-                    });
-                    html += `</div>`;
-                    this.ui.main.innerHTML = html;
-                } catch (e) {
-                    this.toast(e.message, 'error');
-                } finally {
-                    this.showLoader(false);
-                }
-            },
-
-            async loadEpisodes(seriesId, seasonNum, seriesName) {
-                this.showLoader(true, 'Cargando episodios...');
-                try {
-                    const data = await this.fetchAPI('get_series_info', { series_id: seriesId });
-                    const eps = data.episodes ? data.episodes[seasonNum] : [];
-                    this.currentPlaylist = eps;
-
-                    // Reproducir el primer episodio automáticamente
-                    if (eps && eps.length > 0) {
-                        this.playEpisode(eps[0].id, eps[0].title || `Episodio ${eps[0].episode_num}`, seasonNum, seriesName, 0);
-                    } else {
-                        this.toast('No hay episodios disponibles', 'warning');
-                    }
-                } catch (e) {
-                    this.toast(e.message, 'error');
-                } finally {
-                    this.showLoader(false);
-                }
-            },
-
-            playEpisode(id, title, season, seriesName, index) {
-                const url = `${this.config.server}/series/${this.config.username}/${this.config.password}/${id}.mp4`;
-                this.openPlayer(url, `${seriesName} - ${title}`, 'episode', index);
-            },
-
-            openPlayer(url, title, type, epIndex = 0) {
-                this.ui.playerTitle.textContent = title;
-                this.ui.playerModal.classList.add('active');
-                if (this.hls) { this.hls.destroy(); this.hls = null; }
-
-                if (type === 'live' || url.includes('.m3u8')) {
-                    if (Hls.isSupported()) {
-                        this.hls = new Hls();
-                        this.hls.loadSource(url);
-                        this.hls.attachMedia(this.ui.video);
-                        this.hls.on(Hls.Events.MANIFEST_PARSED, () => this.ui.video.play());
-                    } else if (this.ui.video.canPlayType('application/vnd.apple.mpegurl')) {
-                        this.ui.video.src = url;
-                        this.ui.video.play();
-                    }
-                } else {
-                    this.ui.video.src = url;
-                    this.ui.video.play();
-                }
-
-                // Selector de episodios si aplica
-                if (type === 'episode') {
-                    this.ui.epContainer.style.display = 'block';
-                    let html = '';
-                    this.currentPlaylist.forEach((ep, i) => {
-                        html += `<button class="ep-btn ${i === epIndex ? 'active' : ''}" onclick="app.playEpisode('${ep.id}', '${(ep.title || 'Ep ' + ep.episode_num).replace(/'/g, "\\'")}', '${ep.season}', '${title.split(' - ')[0]}', ${i})">${ep.title || 'Ep ' + ep.episode_num}</button>`;
-                    });
-                    this.ui.epGrid.innerHTML = html;
-                } else {
-                    this.ui.epContainer.style.display = 'none';
-                }
-            },
-
-            closePlayer() {
-                this.ui.playerModal.classList.remove('active');
-                this.ui.video.pause();
-                this.ui.video.src = '';
-                if (this.hls) { this.hls.destroy(); this.hls = null; }
-            },
-
-            renderError(msg) {
-                this.ui.main.innerHTML = `
-                    <div style="text-align: center; padding: 80px 20px;">
-                        <i class="fa-solid fa-triangle-exclamation" style="font-size: 64px; color: var(--danger); margin-bottom: 24px;"></i>
-                        <h1 style="margin: 0 0 16px;">Error de Conexión</h1>
-                        <p style="color: var(--text-muted); max-width: 500px; margin: 0 auto 32px;">${msg}</p>
-                        <button class="btn-primary" onclick="app.openLogin()">Revisar Credenciales</button>
-                    </div>
-                `;
-            }
-        };
-
-        // Eventos globales
-        window.addEventListener('scroll', () => {
-            const header = document.getElementById('header');
-            if (window.scrollY > 20) header.classList.add('scrolled');
-            else header.classList.remove('scrolled');
-        });
-
-        // Inicialización
-        window.addEventListener('DOMContentLoaded', () => {
-            // Si no hay credenciales guardadas, mostrar login
-            if (!localStorage.getItem('iptv_config')) {
-                app.openLogin();
-                app.showLoader(false);
-            } else {
-                // Si hay credenciales, cargar la app directamente
-                app.goHome();
-            }
-        });
-    </script>
 </body>
 </html>
